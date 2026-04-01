@@ -1,0 +1,492 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { saveCase } from '$lib/db/cases';
+  import { getAllCasesWithRelations } from '$lib/db/fullCases';
+  import { createEmptyCase } from '$lib/logic/caseFactory';
+  import {
+    recommendInstitution,
+    getPreliminaryReading,
+    recommendDocuments
+  } from '$lib/logic/actionRoute';
+  import { buildGeneratedDocuments } from '$lib/documents/generateDocuments';
+  import { buildRefinedDocumentVariants } from '$lib/logic/refineDocuments';
+  import { refineWithLLM, enrichReadingWithLLM } from '$lib/llm/client';
+
+  import CaseList from '$lib/components/CaseList.svelte';
+  import CaseDetail from '$lib/components/CaseDetail.svelte';
+  import type { CaseRecord, Evidence, CaseEvent } from '$lib/types/case';
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  function makeEvent(caseId: string, type: string, label: string, notes = ''): CaseEvent {
+    return {
+      id: uid(),
+      caseId,
+      type,
+      label,
+      notes,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function downloadTextFile(filename: string, content: string) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  let status = $state('Inicializando...');
+  let debug = $state('');
+  let cases = $state<CaseRecord[]>([]);
+  let selectedCaseId = $state('');
+  let selectedDocumentName = $state('');
+  let selectedVariantKey = $state('institucional_estandar');
+  let selectedLLMProvider = $state('openai');
+
+  let llmRefinedContent = $state('');
+  let llmRefinedLoading = $state(false);
+  let llmRefinedError = $state('');
+
+  let llmReading = $state<any | null>(null);
+  let llmReadingLoading = $state(false);
+  let llmReadingError = $state('');
+
+  async function loadCases() {
+    try {
+      debug = 'Cargando casos con relaciones...';
+      cases = await getAllCasesWithRelations();
+      status = `Casos cargados: ${cases.length}`;
+      debug = 'Carga completada';
+
+      if (cases.length > 0 && !selectedCaseId) {
+        selectedCaseId = cases[0].id;
+      }
+
+      if (selectedCaseId && !cases.some((c) => c.id === selectedCaseId)) {
+        selectedCaseId = cases.length > 0 ? cases[0].id : '';
+      }
+    } catch (error) {
+      console.error(error);
+      status = 'Error al cargar casos';
+      debug = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  function selectCase(caseId: string) {
+    selectedCaseId = caseId;
+    llmRefinedContent = '';
+    llmRefinedError = '';
+    llmReading = null;
+    llmReadingError = '';
+  }
+
+  function selectDocument(name: string) {
+    selectedDocumentName = name;
+    llmRefinedContent = '';
+    llmRefinedError = '';
+  }
+
+  function selectVariant(key: string) {
+    selectedVariantKey = key;
+    llmRefinedContent = '';
+    llmRefinedError = '';
+  }
+
+  function selectLLMProvider(provider: string) {
+    selectedLLMProvider = provider;
+    llmRefinedContent = '';
+    llmRefinedError = '';
+    llmReading = null;
+    llmReadingError = '';
+  }
+
+  function exportDocument(name: string) {
+    const doc = generatedDocuments.find((item) => item.name === name);
+    if (!doc) return;
+
+    const safeName = doc.name.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+    downloadTextFile(`${safeName}.txt`, doc.content);
+  }
+
+  function exportVariant(key: string) {
+    const variant = refinedVariants.find((item) => item.key === key);
+    if (!variant) return;
+
+    downloadTextFile(`${variant.key}.txt`, variant.content);
+  }
+
+  function exportLLMVariant() {
+    if (!llmRefinedContent) return;
+
+    const safeName = selectedVariantKey.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+    downloadTextFile(`${safeName}_llm.txt`, llmRefinedContent);
+  }
+
+  async function runLLMRefine() {
+    try {
+      llmRefinedLoading = true;
+      llmRefinedError = '';
+      llmRefinedContent = '';
+
+      const baseDoc =
+        generatedDocuments.find((doc) => doc.name === selectedDocumentName) ||
+        generatedDocuments[0];
+
+      const selectedVariant =
+        refinedVariants.find((item) => item.key === selectedVariantKey) ||
+        refinedVariants[0];
+
+      if (!baseDoc || !selectedVariant || !currentCase) {
+        llmRefinedError = 'No hay suficiente información para refinar el documento.';
+        return;
+      }
+
+      const result = await refineWithLLM({
+        provider: selectedLLMProvider,
+        baseContent: baseDoc.content,
+        options: {
+          documentName: baseDoc.name,
+          tone: selectedVariant.tone,
+          audience: selectedVariant.audience,
+          variant: selectedVariant.variant,
+          caseData: currentCase,
+          institutionRecommendation
+        },
+        safety_identifier: currentCase.id
+      });
+
+      llmRefinedContent = result.output || '';
+    } catch (error) {
+      console.error(error);
+      llmRefinedError =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo refinar el documento con LLM.';
+    } finally {
+      llmRefinedLoading = false;
+    }
+  }
+
+  async function runLLMReading() {
+    try {
+      if (!currentCase) {
+        llmReadingError = 'No hay caso seleccionado.';
+        return;
+      }
+
+      llmReadingLoading = true;
+      llmReadingError = '';
+      llmReading = null;
+
+      const result = await enrichReadingWithLLM({
+        provider: selectedLLMProvider,
+        caseData: {
+          title: currentCase.title,
+          community: currentCase.community,
+          location: currentCase.location,
+          dateStarted: currentCase.dateStarted,
+          problemType: currentCase.problemType,
+          affectedPeople: currentCase.affectedPeople,
+          status: currentCase.status,
+          authorityContacted: currentCase.authorityContacted,
+          authorityResponse: currentCase.authorityResponse,
+          narrative: currentCase.narrative,
+          evidence: currentCase.evidence
+        },
+        institutionRecommendation,
+        safety_identifier: currentCase.id
+      });
+
+      llmReading = result.output || null;
+    } catch (error) {
+      console.error(error);
+      llmReadingError =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo enriquecer la lectura preliminar con LLM.';
+    } finally {
+      llmReadingLoading = false;
+    }
+  }
+
+  async function createTestCase() {
+    try {
+      const newCase = createEmptyCase();
+      newCase.title = `Caso de prueba ${cases.length + 1}`;
+      newCase.community = 'Comunidad piloto';
+      newCase.narrative =
+        'Este es un caso inicial de prueba para verificar que IndexedDB funciona.';
+      newCase.events.push({
+        id: `evt_extra_${Date.now()}`,
+        caseId: newCase.id,
+        type: 'note',
+        label: 'Evento de prueba',
+        notes: 'Se creó el caso de prueba',
+        createdAt: new Date().toISOString()
+      });
+
+      await saveCase(newCase);
+      await loadCases();
+      selectedCaseId = newCase.id;
+      llmRefinedContent = '';
+      llmReading = null;
+    } catch (error) {
+      console.error(error);
+      status = 'Error al crear caso';
+      debug = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  async function updateCaseField(field: keyof CaseRecord, value: string) {
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (!target) return;
+
+    const previousValue = String(target[field] ?? '');
+    target[field] = value as never;
+    target.updatedAt = new Date().toISOString();
+
+    const fieldsWithEvents: (keyof CaseRecord)[] = [
+      'status',
+      'authorityContacted',
+      'authorityResponse'
+    ];
+
+    if (fieldsWithEvents.includes(field) && previousValue !== value) {
+      target.events = [
+        makeEvent(
+          target.id,
+          'field_updated',
+          `Campo actualizado: ${String(field)}`,
+          `Antes: ${previousValue || '(vacío)'} | Ahora: ${value || '(vacío)'}`
+        ),
+        ...target.events
+      ];
+    }
+
+    await saveCase(target);
+    await loadCases();
+    selectedCaseId = target.id;
+  }
+
+  async function addEvidence() {
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (!target) return;
+
+    const newEvidence: Evidence = {
+      id: uid(),
+      caseId: target.id,
+      type: '',
+      name: '',
+      description: '',
+      gps: '',
+      date: '',
+      fileName: '',
+      fileType: '',
+      fileData: ''
+    };
+
+    target.evidence = [...target.evidence, newEvidence];
+    target.updatedAt = new Date().toISOString();
+    target.events = [
+      makeEvent(
+        target.id,
+        'evidence_added',
+        'Evidencia añadida',
+        'Se creó un nuevo registro de evidencia'
+      ),
+      ...target.events
+    ];
+
+    await saveCase(target);
+    await loadCases();
+    selectedCaseId = target.id;
+  }
+
+  async function updateEvidence(
+    evidenceId: string,
+    field: keyof Evidence,
+    value: string
+  ) {
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (!target) return;
+
+    const evidenceItem = target.evidence.find((e) => e.id === evidenceId);
+    if (!evidenceItem) return;
+
+    evidenceItem[field] = value as never;
+    target.updatedAt = new Date().toISOString();
+    target.events = [
+      makeEvent(
+        target.id,
+        'evidence_updated',
+        `Evidencia actualizada: ${String(field)}`,
+        evidenceId
+      ),
+      ...target.events
+    ];
+
+    await saveCase(target);
+    await loadCases();
+    selectedCaseId = target.id;
+  }
+
+  async function deleteEvidence(evidenceId: string) {
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (!target) return;
+
+    target.evidence = target.evidence.filter((e) => e.id !== evidenceId);
+    target.updatedAt = new Date().toISOString();
+    target.events = [
+      makeEvent(target.id, 'evidence_deleted', 'Evidencia eliminada', evidenceId),
+      ...target.events
+    ];
+
+    await saveCase(target);
+    await loadCases();
+    selectedCaseId = target.id;
+  }
+
+  async function uploadEvidenceFile(evidenceId: string, file: File) {
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (!target) return;
+
+    const evidenceItem = target.evidence.find((e) => e.id === evidenceId);
+    if (!evidenceItem) return;
+
+    const fileData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+
+      reader.onerror = () => {
+        reject(new Error('No se pudo leer el archivo.'));
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    evidenceItem.fileName = file.name;
+    evidenceItem.fileType = file.type;
+    evidenceItem.fileData = fileData;
+    target.updatedAt = new Date().toISOString();
+    target.events = [
+      makeEvent(target.id, 'file_uploaded', 'Archivo adjuntado', file.name),
+      ...target.events
+    ];
+
+    await saveCase(target);
+    await loadCases();
+    selectedCaseId = target.id;
+  }
+
+  let currentCase = $derived(
+    cases.find((c) => c.id === selectedCaseId) || null
+  );
+
+  let institutionRecommendation = $derived(
+    currentCase ? recommendInstitution(currentCase) : null
+  );
+
+  let preliminaryReading = $derived(
+    currentCase ? getPreliminaryReading(currentCase) : null
+  );
+
+  let suggestedDocuments = $derived(
+    currentCase ? recommendDocuments(currentCase) : []
+  );
+
+  let generatedDocuments = $derived(
+    currentCase
+      ? buildGeneratedDocuments(currentCase, institutionRecommendation, suggestedDocuments)
+      : []
+  );
+
+  let refinedVariants = $derived(
+    currentCase && generatedDocuments.length > 0
+      ? buildRefinedDocumentVariants(
+          generatedDocuments.find((doc) => doc.name === selectedDocumentName) ||
+            generatedDocuments[0],
+          currentCase,
+          institutionRecommendation
+        )
+      : []
+  );
+
+  onMount(async () => {
+    await loadCases();
+  });
+</script>
+
+<svelte:head>
+  <title>Copilota de Casos</title>
+</svelte:head>
+
+<div style="padding: 2rem; font-family: sans-serif;">
+  <h1>Copilota de Casos</h1>
+  <p><strong>Estado:</strong> {status}</p>
+  <p><strong>Debug:</strong> {debug}</p>
+
+  <button onclick={createTestCase} style="margin-bottom: 1rem;">
+    Crear caso de prueba
+  </button>
+
+  <div
+    style="
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 2rem;
+      align-items: start;
+    "
+  >
+    <div style="border-right: 1px solid #ddd; padding-right: 1rem;">
+      <CaseList
+        {cases}
+        {selectedCaseId}
+        onSelectCase={selectCase}
+      />
+    </div>
+
+    <div>
+      <CaseDetail
+        caseData={currentCase}
+        onUpdate={updateCaseField}
+        onAddEvidence={addEvidence}
+        onUpdateEvidence={updateEvidence}
+        onDeleteEvidence={deleteEvidence}
+        onUploadEvidenceFile={uploadEvidenceFile}
+        {institutionRecommendation}
+        {preliminaryReading}
+        {suggestedDocuments}
+        {generatedDocuments}
+        selectedDocumentName={selectedDocumentName}
+        onSelectDocument={selectDocument}
+        onExportDocument={exportDocument}
+        {refinedVariants}
+        selectedVariantKey={selectedVariantKey}
+        onSelectVariant={selectVariant}
+        onExportVariant={exportVariant}
+        selectedLLMProvider={selectedLLMProvider}
+        onSelectLLMProvider={selectLLMProvider}
+        llmRefinedContent={llmRefinedContent}
+        llmRefinedLoading={llmRefinedLoading}
+        llmRefinedError={llmRefinedError}
+        onRunLLMRefine={runLLMRefine}
+        onExportLLMVariant={exportLLMVariant}
+        llmReading={llmReading}
+        llmReadingLoading={llmReadingLoading}
+        llmReadingError={llmReadingError}
+        onRunLLMReading={runLLMReading}
+      />
+    </div>
+  </div>
+</div>
