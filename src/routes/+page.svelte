@@ -768,148 +768,127 @@
 </svelte:head>
 
 <div style="padding: 2rem; font-family: sans-serif;">
-  <section
-    style="
-      margin-bottom: 2rem;
-      padding: 2rem;
-      border: 1px solid #d9e2ec;
-      border-radius: 18px;
-      background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
-    "
-  >
-    <div style="max-width: 980px;">
-      <div
-        style="
-          display: inline-block;
-          margin-bottom: 0.75rem;
-          padding: 0.35rem 0.7rem;
-          border-radius: 999px;
-          background: #e8f1fb;
-          font-size: 0.85rem;
-          font-weight: 600;
-        "
-      >
-        Prototipo para evaluación
-      </div>
 
-      <h1 style="margin: 0 0 0.75rem 0; font-size: 2.2rem; line-height: 1.15;">
-        Copilota del Agua TDPS
-      </h1>
 
-      <p style="margin: 0 0 1rem 0; font-size: 1.1rem; max-width: 850px; line-height: 1.5;">
-        Herramienta jurídico-comunitaria y de inteligencia artificial para fortalecer el
-        liderazgo de mujeres indígenas del Lago Titicaca y subcuencas relevantes en la
-        defensa del agua, el ambiente y sus derechos.
-      </p>
 
-      <p style="margin: 0 0 1.25rem 0; max-width: 860px; line-height: 1.55;">
-        La aplicación permite registrar casos, organizar evidencia, sugerir rutas de acción,
-        recuperar base normativa pertinente y generar documentos dirigidos a municipios,
-        ALT y otras instituciones competentes.
-      </p>
-
+    <section
+      style="
+        margin-bottom: 2rem;
+        padding: clamp(1.4rem, 2vw, 2.5rem);
+        border: 1px solid #dbe6ef;
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at top right, rgba(54, 116, 181, 0.08), transparent 28%),
+          linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+        box-shadow: 0 18px 48px rgba(33, 52, 79, 0.08);
+      "
+    >
       <div
         style="
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 0.75rem;
-          margin: 1.25rem 0 1.5rem 0;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 2rem;
+          align-items: center;
         "
       >
-        <div style="padding: 0.9rem 1rem; border-radius: 14px; background: white; border: 1px solid #dde7f0;">
-          <div style="font-weight: 700; margin-bottom: 0.35rem;">1. Registrar casos</div>
-          <div style="font-size: 0.95rem; line-height: 1.45;">
-            Narrar hechos, ordenar información y consolidar evidencia comunitaria.
+        <div style="min-width: 0;">
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 0.45rem;
+              margin-bottom: 1rem;
+              padding: 0.45rem 0.85rem;
+              border-radius: 999px;
+              background: rgba(31, 95, 174, 0.08);
+              color: #184a86;
+              font-size: 0.85rem;
+              font-weight: 700;
+              letter-spacing: 0.01em;
+            "
+          >
+            <span
+              style="
+                width: 8px;
+                height: 8px;
+                border-radius: 999px;
+                background: #1f5fae;
+                display: inline-block;
+              "
+            ></span>
+            Prototipo para evaluación
           </div>
+
+          <h1
+            style="
+              margin: 0 0 1rem 0;
+              font-size: clamp(2.2rem, 5vw, 3.2rem);
+              line-height: 1.02;
+              letter-spacing: -0.04em;
+              color: #0f1720;
+            "
+          >
+            Copilota del Agua TDPS
+          </h1>
+
+          <p
+            style="
+              margin: 0 0 1rem 0;
+              font-size: clamp(1.02rem, 2vw, 1.18rem);
+              line-height: 1.55;
+              color: #223244;
+              max-width: 820px;
+            "
+          >
+            Herramienta jurídico-comunitaria e inteligencia artificial para fortalecer
+            la defensa del agua, el ambiente y los derechos de mujeres indígenas del
+            sistema Titicaca–Desaguadero–Poopó–Salar de Coipasa.
+          </p>
+
+          <p
+            style="
+              margin: 0;
+              font-size: 1rem;
+              line-height: 1.65;
+              color: #516170;
+              max-width: 760px;
+            "
+          >
+            Permite registrar casos, organizar evidencia, activar rutas de acción,
+            recuperar base normativa y generar documentos dirigidos a instituciones
+            competentes.
+          </p>
         </div>
 
-        <div style="padding: 0.9rem 1rem; border-radius: 14px; background: white; border: 1px solid #dde7f0;">
-          <div style="font-weight: 700; margin-bottom: 0.35rem;">2. Activar rutas</div>
-          <div style="font-size: 0.95rem; line-height: 1.45;">
-            Identificar patrones operativos, instituciones probables y pasos de escalamiento.
-          </div>
-        </div>
-
-        <div style="padding: 0.9rem 1rem; border-radius: 14px; background: white; border: 1px solid #dde7f0;">
-          <div style="font-weight: 700; margin-bottom: 0.35rem;">3. Usar base jurídica</div>
-          <div style="font-size: 0.95rem; line-height: 1.45;">
-            Recuperar normas relevantes y asignarlas a documentos estratégicos.
-          </div>
-        </div>
-
-        <div style="padding: 0.9rem 1rem; border-radius: 14px; background: white; border: 1px solid #dde7f0;">
-          <div style="font-weight: 700; margin-bottom: 0.35rem;">4. Generar documentos</div>
-          <div style="font-size: 0.95rem; line-height: 1.45;">
-            Elaborar solicitudes, presentaciones y borradores listos para revisión.
+        <div style="min-width: 0;">
+          <div
+            style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              padding: 1.5rem;
+              border-radius: 22px;
+              border: 1px solid #dbe5ef;
+              background: rgba(255, 255, 255, 0.88);
+              box-shadow: 0 16px 36px rgba(26, 42, 67, 0.08);
+              min-height: 320px;
+            "
+          >
+            <img
+              src="/logo-copilota.png"
+              alt="Logo de la Copilota del Agua TDPS"
+              style="
+                max-width: 100%;
+                width: min(320px, 100%);
+                height: auto;
+                object-fit: contain;
+                display: block;
+              "
+            />
           </div>
         </div>
       </div>
-
-      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
-        <button
-          onclick={openCaseDemo}
-          style="
-            padding: 0.8rem 1.2rem;
-            border: none;
-            border-radius: 12px;
-            background: #1f5fae;
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-          "
-        >
-          Ver caso demo
-        </button>
-
-        <button
-          onclick={() => scrollToSection('workspace')}
-          style="
-            padding: 0.8rem 1.2rem;
-            border: 1px solid #b8c7d8;
-            border-radius: 12px;
-            background: white;
-            font-weight: 600;
-            cursor: pointer;
-          "
-        >
-          Ir al expediente
-        </button>
-
-        <button
-          onclick={() => scrollToSection('workspace')}
-          style="
-            padding: 0.8rem 1.2rem;
-            border: 1px solid #b8c7d8;
-            border-radius: 12px;
-            background: white;
-            font-weight: 600;
-            cursor: pointer;
-          "
-        >
-          Marco normativo
-        </button>
-
-        <button
-          onclick={() => scrollToSection('workspace')}
-          style="
-            padding: 0.8rem 1.2rem;
-            border: 1px solid #b8c7d8;
-            border-radius: 12px;
-            background: white;
-            font-weight: 600;
-            cursor: pointer;
-          "
-        >
-          Documentos
-        </button>
-      </div>
-
-      <div style="font-size: 0.92rem; color: #4d5b6a; line-height: 1.5;">
-        Caso de demostración recomendado: contaminación de la Bahía de Cohana.
-        Se sugiere explorar la ruta de acción, el marco normativo y la generación documental.
-      </div>
-    </div>
-  </section>
+    </section>
 
   <p><strong>Estado:</strong> {status}</p>
   <p><strong>Debug:</strong> {debug}</p>
