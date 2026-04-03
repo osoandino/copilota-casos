@@ -32,6 +32,12 @@
   import type { CaseRecord, Evidence, CaseEvent } from '$lib/types/case';
   import type { CaseNormativeMatch, DocumentUseKey } from '$lib/types/normative';
 
+  import {
+    backupCaseToCloud,
+    restoreCaseFromCloud,
+    listCloudBackups
+  } from '$lib/cloud/caseBackup';
+
   function uid() {
     return Math.random().toString(36).slice(2, 10);
   }
@@ -70,6 +76,12 @@
     }
   }
 
+  function errorToMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && error !== null) return JSON.stringify(error);
+    return String(error);
+  }
+
   const documentNameMap: Record<string, string> = {
     ficha_resumen: 'Ficha resumen del caso',
     solicitud_inspeccion: 'Solicitud de inspección',
@@ -104,6 +116,10 @@
   let normativeEvaluationProviderUsed = $state('');
   let normativeMatchesOverride = $state<CaseNormativeMatch[] | null>(null);
 
+  let cloudBackups = $state<any[]>([]);
+  let cloudLoading = $state(false);
+  let cloudError = $state('');
+
   async function loadCases() {
     try {
       debug = 'Cargando casos con relaciones...';
@@ -121,7 +137,7 @@
     } catch (error) {
       console.error(error);
       status = 'Error al cargar casos';
-      debug = error instanceof Error ? error.message : String(error);
+      debug = errorToMessage(error);
     }
   }
 
@@ -172,7 +188,7 @@
     } catch (error) {
       console.error(error);
       status = 'Error al eliminar caso';
-      debug = error instanceof Error ? error.message : String(error);
+      debug = errorToMessage(error);
     }
   }
 
@@ -218,6 +234,87 @@
       .toLowerCase();
 
     downloadTextFile(`${safeName}_llm.txt`, llmRefinedContent);
+  }
+
+  async function backupCurrentCase() {
+    try {
+      if (!currentCase) return;
+
+      await backupCaseToCloud(toPlain(currentCase));
+      status = 'Caso respaldado en nube';
+      debug = `Respaldo remoto exitoso: ${currentCase.title || currentCase.id}`;
+    } catch (error) {
+      console.error(error);
+      status = 'Error al respaldar en nube';
+      debug = errorToMessage(error);
+    }
+  }
+
+  async function restoreCurrentCase() {
+    try {
+      if (!currentCase) return;
+
+      const remoteCase = await restoreCaseFromCloud(currentCase.id);
+
+      if (!remoteCase) {
+        status = 'No existe respaldo remoto para este caso';
+        debug = currentCase.id;
+        return;
+      }
+
+      await saveCase(toPlain(remoteCase));
+      await loadCases();
+      selectedCaseId = remoteCase.id;
+
+      status = 'Caso recuperado desde nube';
+      debug = `Recuperado: ${remoteCase.title || remoteCase.id}`;
+    } catch (error) {
+      console.error(error);
+      status = 'Error al recuperar desde nube';
+      debug = errorToMessage(error);
+    }
+  }
+
+  async function loadCloudBackups() {
+    try {
+      cloudLoading = true;
+      cloudError = '';
+      cloudBackups = await listCloudBackups();
+
+      status = 'Respaldos remotos cargados';
+      debug = `Se encontraron ${cloudBackups.length} respaldo(s) en nube`;
+    } catch (error) {
+      console.error(error);
+      const message = errorToMessage(error);
+      cloudError = message;
+      status = 'Error al cargar respaldos remotos';
+      debug = message;
+    } finally {
+      cloudLoading = false;
+    }
+  }
+
+  async function restoreSelectedCloudCase(caseId: string) {
+    try {
+      const remoteCase = await restoreCaseFromCloud(caseId);
+
+      if (!remoteCase) {
+        status = 'No existe respaldo remoto para ese caso';
+        debug = caseId;
+        return;
+      }
+
+      await saveCase(toPlain(remoteCase));
+      await loadCases();
+      selectedCaseId = remoteCase.id;
+
+      status = 'Caso recuperado desde nube';
+      debug = `Recuperado: ${remoteCase.title || remoteCase.id}`;
+    } catch (error) {
+      console.error(error);
+      status = 'Error al recuperar desde nube';
+      debug = errorToMessage(error);
+    }
   }
 
   async function runLLMRefine() {
@@ -515,7 +612,7 @@
     } catch (error) {
       console.error(error);
       status = 'Error al crear caso';
-      debug = error instanceof Error ? error.message : String(error);
+      debug = errorToMessage(error);
     }
   }
 
@@ -972,9 +1069,74 @@
   <p><strong>Estado:</strong> {status}</p>
   <p><strong>Debug:</strong> {debug}</p>
 
-  <button onclick={createTestCase} style="margin-bottom: 1rem;">
-    Crear caso de prueba
-  </button>
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <button onclick={createTestCase}>
+      Crear caso de prueba
+    </button>
+
+    <button onclick={backupCurrentCase} disabled={!currentCase}>
+      Respaldar en nube
+    </button>
+
+    <button onclick={restoreCurrentCase} disabled={!currentCase}>
+      Recuperar desde nube
+    </button>
+
+    <button onclick={loadCloudBackups} disabled={cloudLoading}>
+      {cloudLoading ? 'Cargando respaldos...' : 'Ver respaldos en nube'}
+    </button>
+  </div>
+
+  {#if cloudError}
+    <p><strong>Error nube:</strong> {cloudError}</p>
+  {/if}
+
+  {#if cloudBackups.length > 0}
+    <div
+      style="
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border: 1px solid #dbe6ef;
+        border-radius: 16px;
+        background: #f8fbff;
+      "
+    >
+      <h3 style="margin-top: 0;">Respaldos en nube</h3>
+
+      <div style="display: grid; gap: 0.75rem;">
+        {#each cloudBackups as backup}
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 1rem;
+              padding: 0.75rem;
+              border: 1px solid #d9e2ec;
+              border-radius: 12px;
+              background: white;
+            "
+          >
+            <div>
+              <div style="font-weight: 700;">
+                {backup.title || 'Caso sin título'}
+              </div>
+              <div style="font-size: 0.95rem; color: #5f7286;">
+                Comunidad: {backup.community || '—'}
+              </div>
+              <div style="font-size: 0.9rem; color: #6b7c8d;">
+                Actualizado: {backup.updated_at || '—'}
+              </div>
+            </div>
+
+            <button onclick={() => restoreSelectedCloudCase(backup.id)}>
+              Recuperar este caso
+            </button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   <div
     id="workspace"
