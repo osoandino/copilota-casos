@@ -20,10 +20,6 @@ export type SuggestedDocument = {
   why: string;
 };
 
-function norm(text: string) {
-  return (text || '').toLowerCase();
-}
-
 function textBlob(caseData: CaseRecord) {
   return [
     caseData.title,
@@ -40,16 +36,21 @@ function textBlob(caseData: CaseRecord) {
     .toLowerCase();
 }
 
+const ALT_FORMAL_NAME = 'Autoridad Binacional Autónoma del Sistema Hídrico TDPS (ALT)';
+const ALT_SHORT_NAME = 'ALT – Autoridad del Lago Titicaca';
+
 export function recommendInstitution(caseData: CaseRecord): InstitutionRecommendation {
   const t = textBlob(caseData);
 
-  if (t.includes('cohana') || t.includes('katari') || t.includes('lago')) {
+  if (t.includes('cohana') || t.includes('katari') || t.includes('lago') || t.includes('tdps')) {
     return {
-      primary: 'ALT',
-      secondary: 'Municipio',
+      primary: ALT_FORMAL_NAME,
+      secondary: 'Gobierno Autónomo Municipal competente',
       confidence: 'alta',
-      reason: 'El caso parece referirse a una fuente o cuerpo de agua que puede requerir actuación de autoridad hídrica especializada.',
-      nextStep: 'Preparar ficha del caso y solicitud de inspección o atención técnica.'
+      reason:
+        'El caso parece referirse a una afectación hídrica o lacustre con posible dimensión sistémica o binacional, por lo que puede corresponder una ventanilla especializada del sistema TDPS, además de la actuación municipal.',
+      nextStep:
+        'Preparar ficha del caso, solicitud de inspección o atención técnica, y registrar con precisión las gestiones realizadas.'
     };
   }
 
@@ -58,27 +59,33 @@ export function recommendInstitution(caseData: CaseRecord): InstitutionRecommend
       primary: 'Defensoría del Pueblo',
       secondary: 'Fiscalía',
       confidence: 'alta',
-      reason: 'El caso presenta posibles riesgos o represalias contra personas defensoras.',
-      nextStep: 'Registrar el incidente y preparar presentación a Defensoría y/o denuncia.'
+      reason:
+        'El caso presenta posibles riesgos o represalias contra personas defensoras.',
+      nextStep:
+        'Registrar el incidente y preparar presentación a Defensoría y/o denuncia.'
     };
   }
 
   if (t.includes('residuo') || t.includes('botadero') || t.includes('quema') || t.includes('basura')) {
     return {
-      primary: 'Municipio',
+      primary: 'Gobierno Autónomo Municipal competente',
       secondary: 'Defensoría del Pueblo',
       confidence: 'media',
-      reason: 'La gestión inmediata parece recaer en la autoridad municipal o de aseo/medio ambiente.',
-      nextStep: 'Presentar solicitud de inspección y solicitud de información.'
+      reason:
+        'La gestión inmediata parece recaer en la autoridad municipal o de aseo/medio ambiente.',
+      nextStep:
+        'Presentar solicitud de inspección y solicitud de información.'
     };
   }
 
   return {
-    primary: 'Municipio',
+    primary: 'Gobierno Autónomo Municipal competente',
     secondary: 'Defensoría del Pueblo',
     confidence: 'media',
-    reason: 'La autoridad local suele ser la primera ventanilla para inspección, verificación o gestión inicial.',
-    nextStep: 'Preparar una presentación inicial con evidencia y solicitud concreta.'
+    reason:
+      'La autoridad local suele ser la primera ventanilla para inspección, verificación o gestión inicial.',
+    nextStep:
+      'Preparar una presentación inicial con evidencia y solicitud concreta.'
   };
 }
 
@@ -134,7 +141,7 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
   if (t.includes('cohana') || t.includes('katari') || t.includes('lago') || t.includes('tdps')) {
     docs.push({
       name: 'Presentación a la ALT',
-      why: 'Es pertinente cuando el caso tiene dimensión hídrica, lacustre o sistémica.'
+      why: 'Es pertinente cuando el caso tiene dimensión hídrica, lacustre o sistémica vinculada al sistema TDPS.'
     });
   }
 
@@ -161,3 +168,5 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
 
   return docs;
 }
+
+export { ALT_FORMAL_NAME, ALT_SHORT_NAME };

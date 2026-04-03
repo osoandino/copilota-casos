@@ -73,7 +73,17 @@ REGLAS
 2. Si falta información, dilo claramente.
 3. Sé prudente y operativo.
 4. No cites normas si no fueron proporcionadas.
-5. No salgas del JSON.
+5. No inventes nombres completos de siglas institucionales.
+6. Si mencionas ALT, debes referirte a ella únicamente como "Autoridad Binacional Autónoma del Sistema Hídrico TDPS (ALT)" o, en versión breve, "ALT – Autoridad del Lago Titicaca".
+7. Nunca expandas ALT como "Autoridad de Agua y Saneamiento", "Autoridad de Fiscalización y Control de Aguas" ni ninguna otra variante.
+8. Si no tienes certeza sobre una competencia institucional, usa formulaciones prudentes como "podría corresponder", "puede requerir" o "convendría considerar".
+9. No salgas del JSON.
+
+CRITERIO DE REDACCIÓN DEL CAMPO "institutional_route_comment"
+- Explica de forma breve y prudente por qué la institución principal o alternativa podría ser pertinente.
+- Si la institución principal sugerida es ALT, conserva exactamente esa denominación oficial.
+- No agregues competencias no proporcionadas en el caso.
+- No conviertas el comentario en una afirmación jurídica definitiva.
 
 CASO
 Título: ${caseData.title || 'Sin título'}

@@ -70,6 +70,17 @@
     }
   }
 
+  const documentNameMap: Record<string, string> = {
+    ficha_resumen: 'Ficha resumen del caso',
+    solicitud_inspeccion: 'Solicitud de inspección',
+    solicitud_informacion: 'Solicitud de información',
+    nota_seguimiento: 'Nota de seguimiento',
+    acta_comunitaria: 'Acta comunitaria',
+    cronologia: 'Cronología',
+    presentacion_alt: 'Presentación a la ALT',
+    presentacion_defensoria: 'Presentación a la Defensoría del Pueblo'
+  };
+
   let status = $state('Inicializando...');
   let debug = $state('');
   let cases = $state<CaseRecord[]>([]);
@@ -696,9 +707,72 @@
     currentCase ? getPreliminaryReading(currentCase) : null
   );
 
-  let suggestedDocuments = $derived(
+  let normativeRetrieval = $derived(
+    currentCase ? retrieveCandidateNorms(currentCase, normativeSeed) : null
+  );
+
+  let normativeAnalysis = $derived(
+    normativeRetrieval ? normativeRetrieval.analysis : null
+  );
+
+  let candidateNorms = $derived(
+    normativeRetrieval ? normativeRetrieval.candidates : []
+  );
+
+  let initialNormativeMatches = $derived(
+    currentCase ? mergeNormativeMatches(currentCase, candidateNorms) : []
+  );
+
+  let normativeMatches = $derived(
+    normativeMatchesOverride || initialNormativeMatches
+  );
+
+  let routeSuggestedDocuments = $derived(
     currentCase ? recommendDocuments(currentCase) : []
   );
+
+  let documentsActivatedByNorms = $derived(
+    [
+      ...new Set(
+        (normativeMatches || [])
+          .filter(
+            (match) =>
+              !!match.selectedForUse || (match.selectedForDocuments || []).length > 0
+          )
+          .flatMap((match) => match.selectedForDocuments || [])
+      )
+    ]
+  );
+
+  let normativeSuggestedDocuments = $derived(
+    documentsActivatedByNorms.map((key) => ({
+      name: documentNameMap[key] || key,
+      why: 'Activado por normas seleccionadas en el marco normativo.'
+    }))
+  );
+
+  let suggestedDocuments = $derived.by(() => {
+    const base = [
+      {
+        name: 'Ficha resumen del caso',
+        why: 'Documento base del expediente.'
+      }
+    ];
+
+    const combined = [
+      ...base,
+      ...routeSuggestedDocuments,
+      ...normativeSuggestedDocuments
+    ];
+
+    const seen = new Set<string>();
+
+    return combined.filter((doc) => {
+      if (seen.has(doc.name)) return false;
+      seen.add(doc.name);
+      return true;
+    });
+  });
 
   let generatedDocuments = $derived(
     currentCase
@@ -720,26 +794,6 @@
           institutionRecommendation
         )
       : []
-  );
-
-  let normativeRetrieval = $derived(
-    currentCase ? retrieveCandidateNorms(currentCase, normativeSeed) : null
-  );
-
-  let normativeAnalysis = $derived(
-    normativeRetrieval ? normativeRetrieval.analysis : null
-  );
-
-  let candidateNorms = $derived(
-    normativeRetrieval ? normativeRetrieval.candidates : []
-  );
-
-  let initialNormativeMatches = $derived(
-    currentCase ? mergeNormativeMatches(currentCase, candidateNorms) : []
-  );
-
-  let normativeMatches = $derived(
-    normativeMatchesOverride || initialNormativeMatches
   );
 
   let operationalResult = $derived(
@@ -768,127 +822,152 @@
 </svelte:head>
 
 <div style="padding: 2rem; font-family: sans-serif;">
-
-
-
-    <section
+  <section
+    style="
+      margin-bottom: 2rem;
+      padding: clamp(1.5rem, 2.2vw, 2.8rem);
+      border: 1px solid #dbe6ef;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(54, 116, 181, 0.08), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+      box-shadow: 0 18px 48px rgba(33, 52, 79, 0.08);
+    "
+  >
+    <div
       style="
-        margin-bottom: 2rem;
-        padding: clamp(1.4rem, 2vw, 2.5rem);
-        border: 1px solid #dbe6ef;
-        border-radius: 24px;
-        background:
-          radial-gradient(circle at top right, rgba(54, 116, 181, 0.08), transparent 28%),
-          linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
-        box-shadow: 0 18px 48px rgba(33, 52, 79, 0.08);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2.2rem;
+        align-items: center;
       "
     >
-      <div
-        style="
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 2rem;
-          align-items: center;
-        "
-      >
-        <div style="min-width: 0;">
-          <div
+      <div style="min-width: 0;">
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 1rem;
+            padding: 0.48rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(31, 95, 174, 0.08);
+            color: #184a86;
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+          "
+        >
+          <span
             style="
-              display: inline-flex;
-              align-items: center;
-              gap: 0.45rem;
-              margin-bottom: 1rem;
-              padding: 0.45rem 0.85rem;
+              width: 8px;
+              height: 8px;
               border-radius: 999px;
-              background: rgba(31, 95, 174, 0.08);
-              color: #184a86;
-              font-size: 0.85rem;
-              font-weight: 700;
-              letter-spacing: 0.01em;
+              background: #1f5fae;
+              display: inline-block;
             "
-          >
-            <span
-              style="
-                width: 8px;
-                height: 8px;
-                border-radius: 999px;
-                background: #1f5fae;
-                display: inline-block;
-              "
-            ></span>
-            Prototipo para evaluación
-          </div>
-
-          <h1
-            style="
-              margin: 0 0 1rem 0;
-              font-size: clamp(2.2rem, 5vw, 3.2rem);
-              line-height: 1.02;
-              letter-spacing: -0.04em;
-              color: #0f1720;
-            "
-          >
-            Copilota del Agua TDPS
-          </h1>
-
-          <p
-            style="
-              margin: 0 0 1rem 0;
-              font-size: clamp(1.02rem, 2vw, 1.18rem);
-              line-height: 1.55;
-              color: #223244;
-              max-width: 820px;
-            "
-          >
-            Herramienta jurídico-comunitaria e inteligencia artificial para fortalecer
-            la defensa del agua, el ambiente y los derechos de mujeres indígenas del
-            sistema Titicaca–Desaguadero–Poopó–Salar de Coipasa.
-          </p>
-
-          <p
-            style="
-              margin: 0;
-              font-size: 1rem;
-              line-height: 1.65;
-              color: #516170;
-              max-width: 760px;
-            "
-          >
-            Permite registrar casos, organizar evidencia, activar rutas de acción,
-            recuperar base normativa y generar documentos dirigidos a instituciones
-            competentes.
-          </p>
+          ></span>
+          Prototipo para evaluación
         </div>
 
-        <div style="min-width: 0;">
+        <h1
+          style="
+            margin: 0 0 1rem 0;
+            font-size: clamp(2.2rem, 5vw, 3.4rem);
+            line-height: 1.02;
+            letter-spacing: -0.045em;
+            color: #0f1720;
+          "
+        >
+          Copilota del Agua TDPS
+        </h1>
+
+        <p
+          style="
+            margin: 0 0 1rem 0;
+            font-size: clamp(1.03rem, 2vw, 1.18rem);
+            line-height: 1.58;
+            color: #223244;
+            max-width: 820px;
+          "
+        >
+          Herramienta jurídico-comunitaria e inteligencia artificial para fortalecer
+          la defensa del agua, el ambiente y los derechos de mujeres indígenas del
+          sistema Titicaca–Desaguadero–Poopó–Salar de Coipasa.
+        </p>
+
+        <p
+          style="
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.72;
+            color: #526273;
+            max-width: 760px;
+          "
+        >
+          Permite registrar casos, organizar evidencia, activar rutas de acción,
+          recuperar base normativa y generar documentos dirigidos a instituciones
+          competentes.
+        </p>
+      </div>
+
+      <div style="min-width: 0;">
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: clamp(1.2rem, 2vw, 1.8rem);
+            border-radius: 24px;
+            border: 1px solid #dfe8f1;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 16px 36px rgba(26, 42, 67, 0.08);
+            min-height: 340px;
+            position: relative;
+            overflow: hidden;
+          "
+        >
           <div
             style="
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              padding: 1.5rem;
-              border-radius: 22px;
-              border: 1px solid #dbe5ef;
-              background: rgba(255, 255, 255, 0.88);
-              box-shadow: 0 16px 36px rgba(26, 42, 67, 0.08);
-              min-height: 320px;
+              position: absolute;
+              top: -34px;
+              right: -34px;
+              width: 120px;
+              height: 120px;
+              border-radius: 999px;
+              background: rgba(31, 95, 174, 0.06);
             "
-          >
-            <img
-              src="/logo-copilota.png"
-              alt="Logo de la Copilota del Agua TDPS"
-              style="
-                max-width: 100%;
-                width: min(320px, 100%);
-                height: auto;
-                object-fit: contain;
-                display: block;
-              "
-            />
-          </div>
+          ></div>
+
+          <div
+            style="
+              position: absolute;
+              bottom: -42px;
+              left: -42px;
+              width: 140px;
+              height: 140px;
+              border-radius: 999px;
+              background: rgba(79, 146, 99, 0.06);
+            "
+          ></div>
+
+          <img
+            src="/logo-copilota.png"
+            alt="Logo de la Copilota del Agua TDPS"
+            style="
+              position: relative;
+              max-width: 100%;
+              width: min(330px, 100%);
+              height: auto;
+              object-fit: contain;
+              display: block;
+              filter: drop-shadow(0 10px 18px rgba(15, 23, 32, 0.10));
+            "
+          />
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
   <p><strong>Estado:</strong> {status}</p>
   <p><strong>Debug:</strong> {debug}</p>

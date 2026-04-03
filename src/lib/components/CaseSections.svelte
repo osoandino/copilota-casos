@@ -12,11 +12,9 @@
     'Hechos',
     'Evidencia',
     'Seguimiento',
-    'Bitácora',
     'Ruta de acción',
     'Marco normativo',
     'Documentos',
-    'Refinamiento IA'
   ];
 </script>
 
