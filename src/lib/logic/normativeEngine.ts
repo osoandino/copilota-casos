@@ -26,6 +26,10 @@ function uniqueById(items: NormativeSource[]) {
   });
 }
 
+function uniqueStrings(items: string[]) {
+  return [...new Set(items.filter(Boolean).map((x) => normalize(x)))];
+}
+
 function buildCaseText(caseData: CaseRecord) {
   return normalize(
     [
@@ -54,19 +58,19 @@ function detectThemes(caseData: CaseRecord) {
   const procedures: string[] = [];
   const retrievalKeywords: string[] = [];
 
-  if (includesAny(text, ['agua', 'lago', 'bahia', 'cohana', 'katari', 'tdps'])) {
+  if (includesAny(text, ['agua', 'lago', 'bahia', 'cohana', 'katari', 'tdps', 'titicaca'])) {
     themes.push('agua', 'contaminacion hidrica');
     rights.push('agua', 'medio ambiente');
     institutions.push('municipio', 'autoridad ambiental', 'alt');
-    retrievalKeywords.push('agua', 'contaminacion', 'alt', 'tdps', 'binacional');
+    retrievalKeywords.push('agua', 'contaminacion', 'alt', 'tdps', 'binacional', 'titicaca');
   }
 
-  if (includesAny(text, ['aguas servidas', 'descarga', 'descargas', 'ptar', 'alcantarillado'])) {
+  if (includesAny(text, ['aguas servidas', 'descarga', 'descargas', 'ptar', 'alcantarillado', 'rebalse'])) {
     themes.push('aguas residuales', 'saneamiento');
     rights.push('salud', 'agua');
     institutions.push('municipio', 'epsa', 'autoridad ambiental');
     procedures.push('inspeccion', 'fiscalizacion');
-    retrievalKeywords.push('aguas residuales', 'ptar', 'alcantarillado');
+    retrievalKeywords.push('aguas residuales', 'ptar', 'alcantarillado', 'saneamiento');
   }
 
   if (
@@ -87,13 +91,7 @@ function detectThemes(caseData: CaseRecord) {
     rights.push('medio ambiente', 'salud');
     institutions.push('municipio', 'autoridad ambiental');
     procedures.push('inspeccion', 'fiscalizacion');
-    retrievalKeywords.push(
-      'residuos',
-      'botadero',
-      'quema',
-      'microbasurales',
-      'lixiviados'
-    );
+    retrievalKeywords.push('residuos', 'botadero', 'quema', 'microbasurales', 'lixiviados');
   }
 
   if (
@@ -116,12 +114,7 @@ function detectThemes(caseData: CaseRecord) {
     rights.push('salud', 'medio ambiente', 'seguridad');
     institutions.push('autoridad ambiental', 'municipio', 'gobernacion');
     procedures.push('inspeccion', 'fiscalizacion', 'medidas urgentes');
-    retrievalKeywords.push(
-      'sustancias peligrosas',
-      'riesgo quimico',
-      'derrame',
-      'toxico'
-    );
+    retrievalKeywords.push('sustancias peligrosas', 'riesgo quimico', 'derrame', 'toxico');
   }
 
   if (
@@ -137,19 +130,24 @@ function detectThemes(caseData: CaseRecord) {
       'lideresas',
       'intimidacion',
       'intimidación',
-      'acoso'
+      'acoso',
+      'violencia',
+      'violencia politica',
+      'acoso politico'
     ])
   ) {
-    themes.push('defensoras');
-    rights.push('proteccion', 'participacion', 'integridad', 'seguridad');
+    themes.push('defensoras', 'proteccion');
+    rights.push('proteccion', 'participacion', 'integridad', 'seguridad', 'no violencia');
     institutions.push('defensoria', 'fiscalia', 'policia');
-    procedures.push('proteccion', 'seguimiento', 'acompanamiento');
+    procedures.push('proteccion', 'seguimiento', 'acompanamiento', 'denuncia');
     retrievalKeywords.push(
       'defensoras',
       'escazu',
       'proteccion',
       'defensoria',
-      'hostigamiento'
+      'hostigamiento',
+      'ley 243',
+      'ley 348'
     );
   }
 
@@ -162,7 +160,9 @@ function detectThemes(caseData: CaseRecord) {
       'omision',
       'omisión',
       'no informaron',
-      'no fueron informados'
+      'no fueron informados',
+      'sin informe',
+      'sin informacion'
     ])
   ) {
     themes.push('omision institucional');
@@ -183,7 +183,8 @@ function detectThemes(caseData: CaseRecord) {
       'auditoría',
       'cronograma',
       'respuesta escrita',
-      'antecedentes'
+      'antecedentes',
+      'expediente'
     ])
   ) {
     themes.push('informacion ambiental');
@@ -196,26 +197,60 @@ function detectThemes(caseData: CaseRecord) {
   if (
     includesAny(text, [
       'consulta',
-      'participacion',
-      'participación',
+      'consulta previa',
+      'fpic',
+      'consentimiento libre previo e informado',
       'territorio',
+      'territorial',
       'pueblos indigenas',
-      'pueblos indígenas'
+      'pueblos indígenas',
+      'indigena',
+      'indígena',
+      'comunidad indigena',
+      'comunidad indígena',
+      'aymara',
+      'quechua',
+      'recurso natural',
+      'recursos naturales'
     ])
   ) {
-    themes.push('participacion', 'territorio');
-    rights.push('participacion', 'consulta');
-    institutions.push('defensoria', 'estado');
-    procedures.push('consulta', 'acta comunitaria');
-    retrievalKeywords.push('participacion', 'consulta', 'escazu', 'territorio');
+    themes.push('participacion', 'territorio', 'consulta previa', 'pueblos indigenas');
+    rights.push('participacion', 'consulta', 'territorio', 'derechos colectivos');
+    institutions.push('defensoria', 'estado', 'autoridad ambiental');
+    procedures.push('consulta', 'acta comunitaria', 'seguimiento');
+    retrievalKeywords.push(
+      'participacion',
+      'consulta',
+      'escazu',
+      'territorio',
+      'oit 169',
+      'undrip',
+      'fpic'
+    );
+  }
+
+  if (
+    includesAny(text, [
+      'control social',
+      'rendicion de cuentas',
+      'rendición de cuentas',
+      'fiscalizacion social',
+      'fiscalización social'
+    ])
+  ) {
+    themes.push('control social');
+    rights.push('participacion', 'acceso a informacion', 'control social');
+    institutions.push('municipio', 'entidad publica', 'defensoria');
+    procedures.push('seguimiento', 'rendicion de cuentas', 'solicitud de informacion');
+    retrievalKeywords.push('control social', 'ley 341', 'seguimiento', 'rendicion de cuentas');
   }
 
   return {
-    themes: [...new Set(themes)],
-    rights: [...new Set(rights)],
-    institutions: [...new Set(institutions)],
-    procedures: [...new Set(procedures)],
-    retrievalKeywords: [...new Set(retrievalKeywords)]
+    themes: uniqueStrings(themes),
+    rights: uniqueStrings(rights),
+    institutions: uniqueStrings(institutions),
+    procedures: uniqueStrings(procedures),
+    retrievalKeywords: uniqueStrings(retrievalKeywords)
   };
 }
 
@@ -238,7 +273,7 @@ function isAltNorm(norm: NormativeSource) {
       norm.notes || ''
     ].join(' ')
   );
-  return includesAny(haystack, ['alt', 'tdps', 'binacional', 'sistema hidrico']);
+  return includesAny(haystack, ['alt', 'tdps', 'binacional', 'sistema hidrico', 'titicaca']);
 }
 
 function isConstitutionalNorm(norm: NormativeSource) {
@@ -308,6 +343,100 @@ function isDefensoriaNorm(norm: NormativeSource) {
   ]);
 }
 
+function isIndigenousRightsNorm(norm: NormativeSource) {
+  const haystack = normalize(
+    [
+      norm.normTitle,
+      norm.article,
+      ...(norm.themeTags || []),
+      ...(norm.rightsTags || []),
+      norm.notes || ''
+    ].join(' ')
+  );
+
+  return includesAny(haystack, [
+    'pueblos indigenas',
+    'consulta previa',
+    'territorio',
+    'oit 169',
+    'undrip',
+    'consentimiento',
+    'fpic'
+  ]);
+}
+
+function isProtectionNorm(norm: NormativeSource) {
+  const haystack = normalize(
+    [
+      norm.normTitle,
+      norm.article,
+      ...(norm.themeTags || []),
+      ...(norm.rightsTags || []),
+      norm.notes || ''
+    ].join(' ')
+  );
+
+  return includesAny(haystack, [
+    'proteccion',
+    'defensoras',
+    'hostigamiento',
+    'amenazas',
+    'violencia',
+    'ley 243',
+    'ley 348',
+    'belem'
+  ]);
+}
+
+function documentUseBoost(text: string, norm: NormativeSource) {
+  const tags = (norm.documentUseTags || []).map((x) => normalize(x));
+  let bonus = 0;
+
+  if (
+    includesAny(text, ['alt', 'cohana', 'katari', 'lago', 'tdps', 'binacional']) &&
+    tags.includes('presentacion_alt')
+  ) {
+    bonus += 5;
+  }
+
+  if (
+    includesAny(text, ['defensora', 'lideresa', 'amenaza', 'hostigamiento', 'omision', 'omisión']) &&
+    tags.includes('presentacion_defensoria')
+  ) {
+    bonus += 5;
+  }
+
+  if (
+    includesAny(text, ['inspeccion', 'descarga', 'ptar', 'botadero', 'quema', 'derrame']) &&
+    tags.includes('solicitud_inspeccion')
+  ) {
+    bonus += 4;
+  }
+
+  if (
+    includesAny(text, ['informacion', 'información', 'respuesta', 'informe', 'monitoreo', 'antecedentes']) &&
+    tags.includes('solicitud_informacion')
+  ) {
+    bonus += 4;
+  }
+
+  if (
+    includesAny(text, ['comunidad', 'consulta', 'territorio', 'acuerdo', 'asamblea']) &&
+    tags.includes('acta_comunitaria')
+  ) {
+    bonus += 3;
+  }
+
+  if (
+    includesAny(text, ['seguimiento', 'sin respuesta', 'omision', 'omisión']) &&
+    tags.includes('nota_seguimiento')
+  ) {
+    bonus += 3;
+  }
+
+  return bonus;
+}
+
 function scoreNorm(caseData: CaseRecord, norm: NormativeSource) {
   const text = buildCaseText(caseData);
   const haystack = normalize(
@@ -345,7 +474,7 @@ function scoreNorm(caseData: CaseRecord, norm: NormativeSource) {
   }
 
   if (
-    includesAny(text, ['cohana', 'katari', 'bahia', 'lago', 'tdps']) &&
+    includesAny(text, ['cohana', 'katari', 'bahia', 'lago', 'tdps', 'titicaca']) &&
     includesAny(haystack, ['alt', 'tdps', 'binacional'])
   ) {
     score += 8;
@@ -359,17 +488,17 @@ function scoreNorm(caseData: CaseRecord, norm: NormativeSource) {
   }
 
   if (
-    includesAny(text, ['amenaza', 'hostigamiento', 'represalia', 'defensora', 'lideresa', 'intimidacion']) &&
-    includesAny(haystack, ['escazu', 'defensoria', 'proteccion', 'defensoras', 'hostigamiento'])
+    includesAny(text, ['amenaza', 'hostigamiento', 'represalia', 'defensora', 'lideresa', 'intimidacion', 'acoso']) &&
+    includesAny(haystack, ['escazu', 'defensoria', 'proteccion', 'defensoras', 'hostigamiento', 'ley 243', 'ley 348'])
   ) {
-    score += 9;
+    score += 10;
   }
 
   if (
-    includesAny(text, ['consulta', 'participacion', 'participación', 'territorio']) &&
-    includesAny(haystack, ['escazu', 'consulta', 'participacion', 'pueblos indigenas'])
+    includesAny(text, ['consulta', 'consulta previa', 'territorio', 'fpic', 'pueblos indigenas', 'aymara', 'quechua']) &&
+    includesAny(haystack, ['escazu', 'consulta', 'participacion', 'pueblos indigenas', 'oit 169', 'undrip', 'territorio'])
   ) {
-    score += 7;
+    score += 10;
   }
 
   if (
@@ -392,6 +521,8 @@ function scoreNorm(caseData: CaseRecord, norm: NormativeSource) {
   ) {
     score += 8;
   }
+
+  score += documentUseBoost(text, norm);
 
   if (isEscazuNorm(norm)) score += 2;
   if (isAltNorm(norm)) score += 2;
@@ -444,7 +575,8 @@ export function retrieveCandidateNorms(
       'participación',
       'amenaza',
       'hostigamiento',
-      'defensora'
+      'defensora',
+      'lideresa'
     ]) ||
     includesAny(
       normalize(detected.retrievalKeywords.join(' ')),
@@ -452,10 +584,35 @@ export function retrieveCandidateNorms(
     );
 
   const needsAlt =
-    includesAny(caseText, ['cohana', 'katari', 'bahia', 'lago', 'tdps', 'binacional']) ||
+    includesAny(caseText, ['cohana', 'katari', 'bahia', 'lago', 'tdps', 'binacional', 'titicaca']) ||
     includesAny(normalize(detected.retrievalKeywords.join(' ')), ['alt', 'tdps', 'binacional']);
 
-  const baseCandidates = ranked.slice(0, 8).map((item) => item.norm);
+  const needsIndigenous =
+    includesAny(caseText, [
+      'consulta',
+      'consulta previa',
+      'fpic',
+      'territorio',
+      'pueblos indigenas',
+      'pueblos indígenas',
+      'aymara',
+      'quechua'
+    ]) ||
+    includesAny(normalize(detected.retrievalKeywords.join(' ')), ['oit 169', 'undrip', 'fpic', 'territorio']);
+
+  const needsProtection =
+    includesAny(caseText, [
+      'amenaza',
+      'hostigamiento',
+      'represalia',
+      'defensora',
+      'lideresa',
+      'acoso',
+      'violencia'
+    ]) ||
+    includesAny(normalize(detected.retrievalKeywords.join(' ')), ['ley 243', 'ley 348', 'proteccion', 'defensoras']);
+
+  const baseCandidates = ranked.slice(0, 10).map((item) => item.norm);
 
   const bestConstitutional = pickBestByPredicate(ranked, isConstitutionalNorm);
   const bestEnvironmentalRegulation = pickBestByPredicate(ranked, isEnvironmentalRegulation);
@@ -463,6 +620,8 @@ export function retrieveCandidateNorms(
   const bestEscazu = needsEscazu ? pickBestByPredicate(ranked, isEscazuNorm) : undefined;
   const bestAlt = needsAlt ? pickBestByPredicate(ranked, isAltNorm) : undefined;
   const bestDefensoria = pickBestByPredicate(ranked, isDefensoriaNorm);
+  const bestIndigenous = needsIndigenous ? pickBestByPredicate(ranked, isIndigenousRightsNorm) : undefined;
+  const bestProtection = needsProtection ? pickBestByPredicate(ranked, isProtectionNorm) : undefined;
 
   const candidates = uniqueById([
     ...baseCandidates,
@@ -471,12 +630,14 @@ export function retrieveCandidateNorms(
     ...(bestWaterSector ? [bestWaterSector] : []),
     ...(bestEscazu ? [bestEscazu] : []),
     ...(bestAlt ? [bestAlt] : []),
-    ...(bestDefensoria ? [bestDefensoria] : [])
-  ]).slice(0, 10);
+    ...(bestDefensoria ? [bestDefensoria] : []),
+    ...(bestIndigenous ? [bestIndigenous] : []),
+    ...(bestProtection ? [bestProtection] : [])
+  ]).slice(0, 12);
 
   const summary =
     candidates.length > 0
-      ? 'Se recuperaron normas candidatas con base en agua, ambiente, derechos, instituciones y procedimientos relacionados con el caso.'
+      ? 'Se recuperaron normas candidatas con base en agua, ambiente, derechos, participación, instituciones y procedimientos relacionados con el caso.'
       : 'No se recuperaron normas candidatas claras todavía.';
 
   const urgencyLevel: 'alta' | 'media' | 'baja' = includesAny(caseText, [
@@ -484,7 +645,8 @@ export function retrieveCandidateNorms(
     'hostigamiento',
     'derrame',
     'mortandad',
-    'aguas servidas'
+    'aguas servidas',
+    'violencia'
   ])
     ? 'alta'
     : candidates.length > 0
@@ -505,6 +667,81 @@ export function retrieveCandidateNorms(
   };
 }
 
+function inferInitialRelevance(caseData: CaseRecord, norm: NormativeSource): 'alta' | 'media' | 'baja' {
+  const score = scoreNorm(caseData, norm);
+  if (score >= 20) return 'alta';
+  if (score >= 10) return 'media';
+  return 'baja';
+}
+
+function inferFunctionInCase(norm: NormativeSource): string {
+  const haystack = normalize(
+    [
+      norm.normTitle,
+      norm.article,
+      ...(norm.themeTags || []),
+      ...(norm.procedureTags || []),
+      ...(norm.documentUseTags || [])
+    ].join(' ')
+  );
+
+  if (includesAny(haystack, ['solicitud de informacion', 'informacion ambiental', 'peticion'])) {
+    return 'base para solicitar información y exigir respuesta institucional';
+  }
+
+  if (includesAny(haystack, ['inspeccion', 'fiscalizacion', 'control ambiental'])) {
+    return 'base para solicitar inspección, fiscalización o verificación técnica';
+  }
+
+  if (includesAny(haystack, ['defensoria', 'proteccion', 'defensoras', 'hostigamiento'])) {
+    return 'base para escalamiento protector o defensorial';
+  }
+
+  if (includesAny(haystack, ['consulta', 'territorio', 'oit 169', 'undrip', 'fpic'])) {
+    return 'base para participación, consulta o defensa territorial';
+  }
+
+  if (includesAny(haystack, ['alt', 'tdps', 'binacional'])) {
+    return 'base para presentación ante ALT o articulación binacional';
+  }
+
+  return 'fundamento inicial';
+}
+
+function inferMissingForStrongerUse(caseData: CaseRecord): string {
+  const missing: string[] = [];
+
+  if (!caseData.location) missing.push('ubicación precisa');
+  if (!caseData.problemType) missing.push('tipo de problema');
+  if (!caseData.narrative) missing.push('relato claro de los hechos');
+  if (!caseData.authorityContacted) missing.push('registro de gestiones previas');
+  if (!caseData.evidence || caseData.evidence.length === 0) missing.push('evidencia básica');
+
+  return missing.length > 0
+    ? `Conviene reforzar: ${missing.join(', ')}.`
+    : 'Conviene precisar mejor autoridad competente, fechas y anexos probatorios.';
+}
+
+function inferCaution(norm: NormativeSource): string {
+  const haystack = normalize(
+    [norm.normTitle, norm.article, ...(norm.themeTags || []), norm.notes || ''].join(' ')
+  );
+
+  if (includesAny(haystack, ['consulta', 'oit 169', 'undrip', 'fpic'])) {
+    return 'Debe usarse con validación contextual sobre afectación directa, procedimiento aplicable y representación comunitaria.';
+  }
+
+  if (includesAny(haystack, ['penal', 'fiscalia', 'salud publica'])) {
+    return 'Puede requerir evidencia más sólida y evaluación jurídica antes de escalar a vía penal.';
+  }
+
+  if (includesAny(haystack, ['alt', 'tdps', 'binacional'])) {
+    return 'Conviene diferenciar claramente cuándo corresponde ventanilla ALT y cuándo corresponde municipio, autoridad ambiental o EPSA.';
+  }
+
+  return 'Requiere validación contextual antes de uso más fuerte.';
+}
+
 export function buildInitialNormativeMatches(
   caseData: CaseRecord,
   candidateNorms: NormativeSource[]
@@ -513,12 +750,12 @@ export function buildInitialNormativeMatches(
     id: `${caseData.id}-norm-${index + 1}`,
     caseId: caseData.id,
     normativeSourceId: norm.id,
-    relevance: 'media',
-    functionInCase: 'fundamento inicial',
-    rationale: 'Coincidencia preliminar entre el contenido del caso y los temas de la norma.',
+    relevance: inferInitialRelevance(caseData, norm),
+    functionInCase: inferFunctionInCase(norm),
+    rationale: 'Coincidencia preliminar entre el contenido del caso, los derechos involucrados y la función potencial de esta norma.',
     triggeringFact: caseData.problemType || caseData.title || 'Hechos del caso',
-    missingForStrongerUse: 'Mayor precisión de hechos, autoridad competente y evidencia.',
-    caution: 'Requiere validación contextual antes de uso más fuerte.',
+    missingForStrongerUse: inferMissingForStrongerUse(caseData),
+    caution: inferCaution(norm),
     selectedForUse: false,
     selectedForDocuments: []
   }));

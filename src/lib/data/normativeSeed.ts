@@ -473,8 +473,7 @@ export const normativeSeed: NormativeSource[] = [
       'presentacion_alt'
     ],
     notes: 'Entrada estratégica para articular inundaciones contaminantes o riesgos sistémicos con la ventanilla ALT.'
-  }
-  ,
+  },
   {
     id: 'INT-ESC-ART5',
     country: 'Internacional',
@@ -572,8 +571,7 @@ export const normativeSeed: NormativeSource[] = [
       'presentacion_defensoria'
     ],
     notes: 'Norma central para amenazas, hostigamiento o represalias contra defensoras ambientales.'
-  }
-  ,
+  },
   {
     id: 'BOL-DS24176-RGGA-ART1',
     country: 'Bolivia',
@@ -696,8 +694,7 @@ export const normativeSeed: NormativeSource[] = [
       'presentacion_defensoria'
     ],
     notes: 'Refuerza la ruta de presentación y seguimiento ante la Defensoría del Pueblo.'
-  }
-  ,
+  },
   {
     id: 'BOL-DS24176-RGRS-ART1',
     country: 'Bolivia',
@@ -818,5 +815,379 @@ export const normativeSeed: NormativeSource[] = [
       'presentacion_defensoria'
     ],
     notes: 'Entrada funcional para casos de amenazas o represalias contra lideresas y defensoras ambientales.'
+  },
+
+  {
+    id: 'bo-cpe-352',
+    country: 'Bolivia',
+    jurisdictionLevel: 'constitucional',
+    normType: 'Constitución Política del Estado',
+    normTitle: 'Constitución Política del Estado',
+    article: 'Artículo 352',
+    excerpt:
+      'La explotación de recursos naturales en un determinado territorio estará sujeta a un proceso de consulta a la población afectada, convocada por el Estado, que será libre, previa e informada. Se garantiza la participación ciudadana en el proceso de gestión ambiental.',
+    officialSource: 'Fuente oficial pendiente de incorporar',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['consulta previa', 'fpic', 'recursos naturales', 'participacion', 'gestion ambiental'],
+    rightsTags: ['consulta previa', 'participacion', 'territorio', 'derechos colectivos'],
+    institutionTags: ['estado', 'municipio', 'autoridad ambiental', 'defensoria'],
+    procedureTags: ['consulta', 'participacion', 'seguimiento', 'proteccion territorial'],
+    territorialTags: ['nacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'presentacion_defensoria'
+    ],
+    notes: 'Norma constitucional central para casos con afectación territorial, recursos naturales y consulta previa.'
+  },
+  {
+    id: 'bo-cpe-241',
+    country: 'Bolivia',
+    jurisdictionLevel: 'constitucional',
+    normType: 'Constitución Política del Estado',
+    normTitle: 'Constitución Política del Estado',
+    article: 'Artículo 241',
+    excerpt:
+      'El pueblo soberano, por medio de la sociedad civil organizada, participará en el diseño de las políticas públicas y ejercerá el control social a la gestión pública en todos los niveles del Estado y a las entidades públicas, mixtas y privadas que administren recursos fiscales.',
+    officialSource: 'Fuente oficial pendiente de incorporar',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['control social', 'participacion', 'gestion publica', 'seguimiento'],
+    rightsTags: ['participacion', 'control social', 'acceso a informacion'],
+    institutionTags: ['municipio', 'entidad publica', 'estado', 'defensoria'],
+    procedureTags: ['control social', 'seguimiento', 'rendicion de cuentas', 'peticion'],
+    territorialTags: ['nacional'],
+    documentUseTags: [
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Refuerza la legitimidad del control social comunitario sobre gestión pública y servicios.'
+  },
+  {
+    id: 'bo-cpe-242',
+    country: 'Bolivia',
+    jurisdictionLevel: 'constitucional',
+    normType: 'Constitución Política del Estado',
+    normTitle: 'Constitución Política del Estado',
+    article: 'Artículo 242',
+    excerpt:
+      'La participación y el control social implican, entre otros, participar en la formulación de políticas del Estado, apoyar al Órgano Legislativo en la construcción colectiva de leyes, desarrollar el control social a la gestión pública, generar un manejo transparente de la información y formular informes que fundamenten la solicitud de rendición de cuentas.',
+    officialSource: 'Fuente oficial pendiente de incorporar',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['control social', 'rendicion de cuentas', 'transparencia', 'seguimiento'],
+    rightsTags: ['participacion', 'control social', 'acceso a informacion'],
+    institutionTags: ['municipio', 'entidad publica', 'estado', 'defensoria'],
+    procedureTags: ['solicitud de informacion', 'seguimiento', 'rendicion de cuentas'],
+    territorialTags: ['nacional'],
+    documentUseTags: [
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Muy útil para justificar solicitudes de información, reportes y seguimiento institucional.'
+  },
+  {
+    id: 'INT-ESC-ART7',
+    country: 'Internacional',
+    jurisdictionLevel: 'tratado',
+    normType: 'Acuerdo',
+    normTitle: 'Acuerdo de Escazú',
+    article: 'Artículo 7',
+    excerpt:
+      'Cada Parte garantizará mecanismos de participación del público en los procesos de toma de decisiones, revisiones, reexaminaciones o actualizaciones respecto de proyectos y actividades, así como en otros procesos de autorizaciones ambientales que tengan o puedan tener un impacto significativo sobre el medio ambiente.',
+    officialSource: 'CEPAL / Acuerdo de Escazú',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['escazu', 'participacion publica', 'decisiones ambientales', 'consulta'],
+    rightsTags: ['participacion', 'medio ambiente', 'acceso a informacion'],
+    institutionTags: ['autoridad ambiental', 'municipio', 'estado', 'defensoria'],
+    procedureTags: ['participacion', 'consulta', 'seguimiento', 'peticion'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Norma clave para reforzar participación pública en procesos ambientales y decisiones con impacto.'
+  },
+  {
+    id: 'INT-OIT169-ART6',
+    country: 'Internacional',
+    jurisdictionLevel: 'tratado',
+    normType: 'Convenio internacional',
+    normTitle: 'Convenio 169 de la OIT',
+    article: 'Artículo 6',
+    excerpt:
+      'Los gobiernos deberán consultar a los pueblos interesados, mediante procedimientos apropiados y en particular a través de sus instituciones representativas, cada vez que se prevean medidas legislativas o administrativas susceptibles de afectarles directamente.',
+    officialSource: 'OIT / Convenio 169',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['oit 169', 'consulta previa', 'pueblos indigenas', 'instituciones representativas'],
+    rightsTags: ['consulta previa', 'participacion', 'derechos colectivos'],
+    institutionTags: ['estado', 'autoridad ambiental', 'municipio', 'defensoria'],
+    procedureTags: ['consulta', 'participacion', 'seguimiento', 'proteccion territorial'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'presentacion_defensoria'
+    ],
+    notes: 'Base internacional muy fuerte para consulta previa y participación indígena.'
+  },
+  {
+    id: 'INT-OIT169-ART7',
+    country: 'Internacional',
+    jurisdictionLevel: 'tratado',
+    normType: 'Convenio internacional',
+    normTitle: 'Convenio 169 de la OIT',
+    article: 'Artículo 7',
+    excerpt:
+      'Los pueblos interesados deberán tener el derecho de decidir sus propias prioridades en lo que atañe al proceso de desarrollo y de controlar, en la medida de lo posible, su propio desarrollo económico, social y cultural.',
+    officialSource: 'OIT / Convenio 169',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['oit 169', 'desarrollo', 'participacion', 'territorio', 'autodeterminacion'],
+    rightsTags: ['participacion', 'territorio', 'desarrollo propio', 'derechos colectivos'],
+    institutionTags: ['estado', 'municipio', 'defensoria'],
+    procedureTags: ['participacion', 'planificacion', 'seguimiento'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'nota_seguimiento',
+      'presentacion_defensoria'
+    ],
+    notes: 'Útil para reforzar decisiones comunitarias y prioridades territoriales frente a proyectos o medidas públicas.'
+  },
+  {
+    id: 'INT-OIT169-ART15',
+    country: 'Internacional',
+    jurisdictionLevel: 'tratado',
+    normType: 'Convenio internacional',
+    normTitle: 'Convenio 169 de la OIT',
+    article: 'Artículo 15',
+    excerpt:
+      'Los derechos de los pueblos interesados a los recursos naturales existentes en sus tierras deberán protegerse especialmente. Estos derechos comprenden el derecho de esos pueblos a participar en la utilización, administración y conservación de dichos recursos.',
+    officialSource: 'OIT / Convenio 169',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['oit 169', 'recursos naturales', 'territorio', 'agua', 'participacion'],
+    rightsTags: ['territorio', 'recursos naturales', 'participacion', 'derechos colectivos'],
+    institutionTags: ['estado', 'autoridad ambiental', 'municipio', 'defensoria'],
+    procedureTags: ['consulta', 'participacion', 'proteccion territorial'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'solicitud_informacion',
+      'presentacion_defensoria'
+    ],
+    notes: 'Clave para casos en que agua, territorio o recursos naturales afectan directamente a pueblos indígenas.'
+  },
+  {
+    id: 'INT-UNDRIP-ART18',
+    country: 'Internacional',
+    jurisdictionLevel: 'declaracion',
+    normType: 'Declaración internacional',
+    normTitle: 'Declaración de las Naciones Unidas sobre los Derechos de los Pueblos Indígenas',
+    article: 'Artículo 18',
+    excerpt:
+      'Los pueblos indígenas tienen derecho a participar en la adopción de decisiones en las cuestiones que afecten a sus derechos, por conducto de representantes elegidos por ellos de conformidad con sus propios procedimientos.',
+    officialSource: 'ONU / UNDRIP',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['undrip', 'participacion', 'pueblos indigenas', 'representacion'],
+    rightsTags: ['participacion', 'derechos colectivos', 'autodeterminacion'],
+    institutionTags: ['estado', 'municipio', 'defensoria'],
+    procedureTags: ['participacion', 'consulta', 'representacion colectiva'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'acta_comunitaria',
+      'ficha_resumen',
+      'nota_seguimiento',
+      'presentacion_defensoria'
+    ],
+    notes: 'Refuerza participación de comunidades y representación propia en decisiones que les afecten.'
+  },
+  {
+    id: 'INT-UNDRIP-ART19',
+    country: 'Internacional',
+    jurisdictionLevel: 'declaracion',
+    normType: 'Declaración internacional',
+    normTitle: 'Declaración de las Naciones Unidas sobre los Derechos de los Pueblos Indígenas',
+    article: 'Artículo 19',
+    excerpt:
+      'Los Estados celebrarán consultas y cooperarán de buena fe con los pueblos indígenas interesados, por medio de sus instituciones representativas, antes de adoptar y aplicar medidas legislativas o administrativas que los afecten, a fin de obtener su consentimiento libre, previo e informado.',
+    officialSource: 'ONU / UNDRIP',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['undrip', 'consulta previa', 'consentimiento libre previo e informado', 'fpic'],
+    rightsTags: ['consulta previa', 'consentimiento', 'participacion', 'derechos colectivos'],
+    institutionTags: ['estado', 'autoridad ambiental', 'municipio', 'defensoria'],
+    procedureTags: ['consulta', 'consentimiento', 'seguimiento'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'presentacion_defensoria'
+    ],
+    notes: 'Norma internacional de alto valor para FPIC y medidas administrativas que afectan comunidades.'
+  },
+  {
+    id: 'INT-UNDRIP-ART32',
+    country: 'Internacional',
+    jurisdictionLevel: 'declaracion',
+    normType: 'Declaración internacional',
+    normTitle: 'Declaración de las Naciones Unidas sobre los Derechos de los Pueblos Indígenas',
+    article: 'Artículo 32',
+    excerpt:
+      'Los Estados celebrarán consultas y cooperarán de buena fe con los pueblos indígenas interesados a fin de obtener su consentimiento libre y previo antes de aprobar cualquier proyecto que afecte a sus tierras o territorios y otros recursos.',
+    officialSource: 'ONU / UNDRIP',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['undrip', 'territorio', 'recursos naturales', 'proyectos', 'fpic'],
+    rightsTags: ['territorio', 'consulta previa', 'consentimiento', 'recursos naturales'],
+    institutionTags: ['estado', 'autoridad ambiental', 'municipio', 'defensoria'],
+    procedureTags: ['consulta', 'consentimiento', 'proteccion territorial'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'ficha_resumen',
+      'acta_comunitaria',
+      'solicitud_informacion',
+      'presentacion_defensoria'
+    ],
+    notes: 'Muy útil para proyectos o decisiones sobre tierras, agua y recursos que afecten a comunidades.'
+  },
+  {
+    id: 'BOL-LEY243-BASE',
+    country: 'Bolivia',
+    jurisdictionLevel: 'ley',
+    normType: 'Ley',
+    normTitle: 'Ley 243 Contra el Acoso y Violencia Política hacia las Mujeres',
+    article: 'Objeto y protección frente al acoso y violencia política',
+    excerpt:
+      'La Ley establece mecanismos de prevención, atención y sanción de actos de acoso y violencia política hacia las mujeres en el ejercicio de sus derechos políticos y de participación.',
+    officialSource: 'Ley 243',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['acoso politico', 'violencia politica', 'lideresas', 'participacion'],
+    rightsTags: ['participacion', 'integridad', 'proteccion', 'no violencia'],
+    institutionTags: ['defensoria', 'fiscalia', 'policia', 'autoridad electoral'],
+    procedureTags: ['denuncia', 'proteccion', 'seguimiento', 'acompanamiento'],
+    territorialTags: ['nacional'],
+    documentUseTags: [
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Útil para lideresas que sufren hostigamiento o violencia por su rol de representación e incidencia.'
+  },
+  {
+    id: 'BOL-LEY348-BASE',
+    country: 'Bolivia',
+    jurisdictionLevel: 'ley',
+    normType: 'Ley',
+    normTitle: 'Ley 348 Integral para Garantizar a las Mujeres una Vida Libre de Violencia',
+    article: 'Protección integral frente a violencia contra las mujeres',
+    excerpt:
+      'La Ley establece mecanismos, medidas y políticas integrales de prevención, atención, protección y reparación para garantizar a las mujeres una vida libre de violencia.',
+    officialSource: 'Ley 348',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['violencia contra las mujeres', 'proteccion', 'lideresas', 'seguridad'],
+    rightsTags: ['integridad', 'seguridad', 'proteccion', 'no violencia'],
+    institutionTags: ['defensoria', 'fiscalia', 'policia', 'slim'],
+    procedureTags: ['proteccion', 'denuncia', 'acompanamiento', 'seguimiento'],
+    territorialTags: ['nacional'],
+    documentUseTags: [
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Refuerza rutas de protección cuando la afectación ambiental deriva en amenazas o violencia contra mujeres lideresas.'
+  },
+  {
+    id: 'INT-BELEM-PARA',
+    country: 'Internacional',
+    jurisdictionLevel: 'tratado',
+    normType: 'Convención internacional',
+    normTitle: 'Convención de Belém do Pará',
+    article: 'Derecho de las mujeres a una vida libre de violencia',
+    excerpt:
+      'Toda mujer tiene derecho a una vida libre de violencia, tanto en el ámbito público como en el privado, y los Estados deben actuar con la debida diligencia para prevenir, sancionar y erradicar la violencia contra las mujeres.',
+    officialSource: 'OEA / Convención de Belém do Pará',
+    validityStatus: 'verificada',
+    lastReviewed: '2026-04-03',
+    themeTags: ['belem do para', 'violencia contra las mujeres', 'proteccion', 'lideresas'],
+    rightsTags: ['no violencia', 'integridad', 'seguridad', 'participacion'],
+    institutionTags: ['defensoria', 'fiscalia', 'policia', 'estado'],
+    procedureTags: ['proteccion', 'acompanamiento', 'seguimiento', 'denuncia'],
+    territorialTags: ['internacional'],
+    documentUseTags: [
+      'nota_seguimiento',
+      'acta_comunitaria',
+      'presentacion_defensoria'
+    ],
+    notes: 'Refuerzo internacional para rutas de protección de lideresas y defensoras frente a violencia y represalias.'
+  },
+  {
+    id: 'BIN-ALT-04',
+    country: 'Binacional Perú-Bolivia',
+    jurisdictionLevel: 'tratado',
+    normType: 'Estatuto institucional',
+    normTitle: 'Estatuto de la Autoridad Binacional Autónoma del Sistema Hídrico TDPS',
+    article: 'Coordinación técnica, estudios e intercambio de información',
+    excerpt:
+      'La ALT desarrolla acciones de coordinación técnica, estudios, recomendaciones y articulación institucional respecto del sistema hídrico TDPS y de sus problemáticas de connotación binacional.',
+    officialSource: 'Estatuto ALT',
+    validityStatus: 'pendiente_revision',
+    lastReviewed: '2026-04-03',
+    themeTags: ['alt', 'tdps', 'informacion', 'coordinacion tecnica', 'estudios'],
+    rightsTags: ['agua', 'medio ambiente', 'cooperacion'],
+    institutionTags: ['alt', 'autoridad binacional', 'estado', 'municipio'],
+    procedureTags: ['solicitud de informacion', 'presentacion institucional', 'seguimiento'],
+    territorialTags: ['binacional', 'tdps'],
+    documentUseTags: [
+      'solicitud_informacion',
+      'nota_seguimiento',
+      'presentacion_alt'
+    ],
+    notes: 'Sirve para reforzar solicitudes de información técnica y seguimiento ante ALT.'
+  },
+  {
+    id: 'BIN-ALT-05',
+    country: 'Binacional Perú-Bolivia',
+    jurisdictionLevel: 'tratado',
+    normType: 'Estatuto institucional',
+    normTitle: 'Estatuto de la Autoridad Binacional Autónoma del Sistema Hídrico TDPS',
+    article: 'Articulación sobre problemas del sistema compartido',
+    excerpt:
+      'La ALT constituye una ventanilla institucional especializada para articular información, coordinación y recomendaciones frente a problemáticas del sistema hídrico compartido TDPS.',
+    officialSource: 'Estatuto ALT',
+    validityStatus: 'pendiente_revision',
+    lastReviewed: '2026-04-03',
+    themeTags: ['alt', 'tdps', 'ventanilla institucional', 'problema sistemico', 'lago titicaca'],
+    rightsTags: ['agua', 'medio ambiente', 'cooperacion'],
+    institutionTags: ['alt', 'autoridad binacional'],
+    procedureTags: ['presentacion institucional', 'coordinacion', 'seguimiento'],
+    territorialTags: ['binacional', 'tdps'],
+    documentUseTags: [
+      'ficha_resumen',
+      'nota_seguimiento',
+      'presentacion_alt'
+    ],
+    notes: 'Entrada funcional para casos tipo Cohana/Katari/Titicaca con dimensión sistémica.'
   }
 ];

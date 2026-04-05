@@ -1071,15 +1071,11 @@
 
   <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
     <button onclick={createTestCase}>
-      Crear caso de prueba
+      Crear caso
     </button>
 
     <button onclick={backupCurrentCase} disabled={!currentCase}>
       Respaldar en nube
-    </button>
-
-    <button onclick={restoreCurrentCase} disabled={!currentCase}>
-      Recuperar desde nube
     </button>
 
     <button onclick={loadCloudBackups} disabled={cloudLoading}>
