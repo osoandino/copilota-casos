@@ -4,24 +4,69 @@ import { openai } from '$lib/server/openai';
 import { normativeSeed } from '$lib/data/normativeSeed';
 import type { DocumentUseKey } from '$lib/types/normative';
 
+type NormativeMatchInput = {
+  normativeSourceId: string;
+  selectedForUse: boolean;
+  selectedForDocuments: string[];
+  functionInCase?: string;
+  rationale?: string;
+  caution?: string;
+  relevance?: string;
+};
+
+type SelectedNormForRefine = {
+  id: string;
+  title: string;
+  article: string;
+  excerpt: string;
+  validityStatus: string;
+  functionInCase: string;
+  rationale: string;
+  caution: string;
+  relevance: string;
+  priorityScore: number;
+};
+
 function mapDocNameToUseKey(docName: string): DocumentUseKey | null {
   const normalized = (docName || '').toLowerCase();
 
   if (normalized.includes('ficha')) return 'ficha_resumen';
+
   if (normalized.includes('inspección') || normalized.includes('inspeccion')) {
     return 'solicitud_inspeccion';
   }
+
   if (normalized.includes('información') || normalized.includes('informacion')) {
     return 'solicitud_informacion';
   }
+
   if (normalized.includes('seguimiento')) return 'nota_seguimiento';
   if (normalized.includes('acta')) return 'acta_comunitaria';
+
   if (normalized.includes('cronología') || normalized.includes('cronologia')) {
     return 'cronologia';
   }
+
   if (normalized.includes('alt')) return 'presentacion_alt';
+
   if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
     return 'presentacion_defensoria';
+  }
+
+  if (normalized.includes('memorial') && normalized.includes('municip')) {
+    return 'memorial_municipio';
+  }
+
+  if (normalized.includes('minuta')) {
+    return 'minuta_reunion';
+  }
+
+  if (
+    normalized.includes('paquete de evidencia') ||
+    normalized.includes('paquete evidencia') ||
+    normalized.includes('evidencia')
+  ) {
+    return 'paquete_evidencia';
   }
 
   return null;
@@ -29,6 +74,15 @@ function mapDocNameToUseKey(docName: string): DocumentUseKey | null {
 
 function getPriorityFunctionsForDocument(documentName: string): string[] {
   const normalized = (documentName || '').toLowerCase();
+
+  if (normalized.includes('ficha')) {
+    return [
+      'derecho_ambiental',
+      'derecho_al_agua',
+      'participacion',
+      'control_social'
+    ];
+  }
 
   if (
     normalized.includes('solicitud de información') ||
@@ -58,6 +112,32 @@ function getPriorityFunctionsForDocument(documentName: string): string[] {
     ];
   }
 
+  if (normalized.includes('seguimiento')) {
+    return [
+      'seguimiento_omision',
+      'derecho_peticion',
+      'control_social',
+      'transparencia_activa'
+    ];
+  }
+
+  if (normalized.includes('acta')) {
+    return [
+      'participacion',
+      'control_social',
+      'coordinacion_interinstitucional',
+      'seguimiento_omision'
+    ];
+  }
+
+  if (normalized.includes('cronología') || normalized.includes('cronologia')) {
+    return [
+      'seguimiento_omision',
+      'control_social',
+      'acceso_informacion'
+    ];
+  }
+
   if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
     return [
       'proteccion_defensoras',
@@ -82,6 +162,42 @@ function getPriorityFunctionsForDocument(documentName: string): string[] {
     ];
   }
 
+  if (normalized.includes('memorial') && normalized.includes('municip')) {
+    return [
+      'competencia_municipal',
+      'derecho_peticion',
+      'inspeccion_fiscalizacion',
+      'gestion_riesgos',
+      'salud_publica',
+      'derecho_ambiental',
+      'derecho_al_agua'
+    ];
+  }
+
+  if (normalized.includes('minuta')) {
+    return [
+      'participacion',
+      'control_social',
+      'coordinacion_interinstitucional',
+      'seguimiento_omision'
+    ];
+  }
+
+  if (
+    normalized.includes('paquete de evidencia') ||
+    normalized.includes('paquete evidencia') ||
+    normalized.includes('evidencia')
+  ) {
+    return [
+      'control_social',
+      'inspeccion_fiscalizacion',
+      'seguimiento_omision',
+      'derecho_ambiental',
+      'derecho_al_agua',
+      'participacion'
+    ];
+  }
+
   return [
     'derecho_ambiental',
     'derecho_al_agua',
@@ -94,18 +210,10 @@ function getSelectedNormsForDocument(payload: {
   options: {
     documentName: string;
     caseData: {
-      normativeMatches?: Array<{
-        normativeSourceId: string;
-        selectedForUse: boolean;
-        selectedForDocuments: string[];
-        functionInCase?: string;
-        rationale?: string;
-        caution?: string;
-        relevance?: string;
-      }>;
+      normativeMatches?: NormativeMatchInput[];
     };
   };
-}) {
+}): SelectedNormForRefine[] {
   const docUseKey = mapDocNameToUseKey(payload.options.documentName);
   if (!docUseKey) return [];
 
@@ -121,7 +229,7 @@ function getSelectedNormsForDocument(payload: {
         Array.isArray(m.selectedForDocuments) &&
         m.selectedForDocuments.includes(docUseKey)
     )
-    .map((m) => {
+    .map((m): SelectedNormForRefine | null => {
       const source = normativeSeed.find((n) => n.id === m.normativeSourceId);
       if (!source) return null;
 
@@ -144,10 +252,10 @@ function getSelectedNormsForDocument(payload: {
 
       return {
         id: source.id,
-        title: source.normTitle,
-        article: source.article,
-        excerpt: source.excerpt,
-        validityStatus: source.validityStatus,
+        title: source.normTitle || '',
+        article: source.article || '',
+        excerpt: source.excerpt || '',
+        validityStatus: source.validityStatus || '',
         functionInCase: fn,
         rationale: m.rationale || '',
         caution: m.caution || '',
@@ -155,14 +263,30 @@ function getSelectedNormsForDocument(payload: {
         priorityScore
       };
     })
-    .filter(Boolean)
-    .sort((a, b) => (b?.priorityScore || 0) - (a?.priorityScore || 0));
+    .filter((item): item is SelectedNormForRefine => item !== null)
+    .sort((a, b) => b.priorityScore - a.priorityScore);
 
   return enriched;
 }
 
 function getDocumentSpecificInstruction(documentName: string) {
   const normalized = (documentName || '').toLowerCase();
+
+  if (normalized.includes('ficha')) {
+    return `
+TIPO DOCUMENTAL: FICHA RESUMEN
+
+FINALIDAD
+Este documento debe sintetizar el caso de forma clara, ordenada y útil para revisión, seguimiento o derivación.
+
+INSTRUCCIONES ESPECÍFICAS
+- Resume hechos, lugar, personas afectadas, actuaciones previas y estado actual.
+- Mantén tono claro, sobrio y organizativo.
+- Ordena el contenido en secciones breves y útiles.
+- No conviertas la ficha en denuncia agresiva ni en ensayo jurídico largo.
+- Usa la base normativa solo para orientar o contextualizar, no para sobrecargar la ficha.
+`.trim();
+  }
 
   if (
     normalized.includes('solicitud de información') ||
@@ -204,6 +328,53 @@ INSTRUCCIONES ESPECÍFICAS
 `.trim();
   }
 
+  if (normalized.includes('seguimiento')) {
+    return `
+TIPO DOCUMENTAL: NOTA DE SEGUIMIENTO
+
+FINALIDAD
+Este documento debe dejar constancia de actuaciones previas y pedir respuesta, avance o cumplimiento.
+
+INSTRUCCIONES ESPECÍFICAS
+- Redacta en tono formal, sobrio y administrativo.
+- Resume gestiones previas, fechas o antecedentes relevantes.
+- Señala con claridad qué sigue pendiente o qué respuesta se espera.
+- Da prioridad a normas cuya función sea seguimiento_omision, derecho_peticion, transparencia_activa o control_social.
+- No conviertas el documento en reclamo emocional ni en escrito sancionatorio.
+`.trim();
+  }
+
+  if (normalized.includes('acta')) {
+    return `
+TIPO DOCUMENTAL: ACTA COMUNITARIA
+
+FINALIDAD
+Este documento debe registrar acuerdos, hechos, decisiones o mandatos comunitarios de forma clara y usable.
+
+INSTRUCCIONES ESPECÍFICAS
+- Redacta en tono formal pero comprensible.
+- Deja claro quiénes participaron, qué se discutió y qué acuerdos se adoptaron.
+- Si corresponde, registra mandato, respaldo o decisiones para acciones posteriores.
+- Da prioridad a normas cuya función sea participacion, control_social o coordinacion_interinstitucional.
+- No conviertas el acta en memorial ni en denuncia.
+`.trim();
+  }
+
+  if (normalized.includes('cronología') || normalized.includes('cronologia')) {
+    return `
+TIPO DOCUMENTAL: CRONOLOGÍA
+
+FINALIDAD
+Este documento debe ordenar temporalmente los hechos, actuaciones y respuestas institucionales del caso.
+
+INSTRUCCIONES ESPECÍFICAS
+- Presenta la información en secuencia temporal clara.
+- Prioriza fechas, actuaciones, omisiones, visitas, respuestas y eventos relevantes.
+- No conviertas la cronología en argumentación extensa.
+- Puede incorporar base normativa solo si ayuda a entender la relevancia de un momento clave.
+`.trim();
+  }
+
   if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
     return `
 TIPO DOCUMENTAL: PRESENTACIÓN A LA DEFENSORÍA DEL PUEBLO
@@ -238,6 +409,57 @@ INSTRUCCIONES ESPECÍFICAS
 `.trim();
   }
 
+  if (normalized.includes('memorial') && normalized.includes('municip')) {
+    return `
+TIPO DOCUMENTAL: MEMORIAL AL MUNICIPIO
+
+FINALIDAD
+Este documento debe presentar formalmente un problema y solicitar actuación municipal concreta.
+
+INSTRUCCIONES ESPECÍFICAS
+- Redacta en tono formal, administrativo y claro.
+- Enfatiza hechos verificables, afectación local y competencia municipal.
+- El petitorio debe ser concreto: inspección, informe, intervención, limpieza, fiscalización, mitigación o seguimiento.
+- Da prioridad a normas cuya función sea competencia_municipal, derecho_peticion, inspeccion_fiscalizacion, gestion_riesgos o salud_publica.
+- No conviertas el texto en una denuncia penal ni en manifiesto político.
+`.trim();
+  }
+
+  if (normalized.includes('minuta')) {
+    return `
+TIPO DOCUMENTAL: MINUTA DE REUNIÓN
+
+FINALIDAD
+Este documento debe resumir una reunión de trabajo, acuerdos, tareas y próximos pasos.
+
+INSTRUCCIONES ESPECÍFICAS
+- Redacta de forma clara, breve y ordenada.
+- Identifica participantes, temas tratados, acuerdos y responsables.
+- Si corresponde, deja constancia de compromisos institucionales o comunitarios.
+- No conviertas la minuta en acta jurídica compleja ni en memorial.
+`.trim();
+  }
+
+  if (
+    normalized.includes('paquete de evidencia') ||
+    normalized.includes('paquete evidencia') ||
+    normalized.includes('evidencia')
+  ) {
+    return `
+TIPO DOCUMENTAL: PAQUETE DE EVIDENCIA
+
+FINALIDAD
+Este documento debe organizar evidencia útil para sustentar el caso y facilitar su revisión por una autoridad o instancia acompañante.
+
+INSTRUCCIONES ESPECÍFICAS
+- Ordena la evidencia de forma clara, trazable y verificable.
+- Describe anexos, fotografías, testimonios, fechas, lugares y relación con los hechos.
+- Si corresponde, explica brevemente por qué cada pieza fortalece el caso.
+- No inventes anexos ni afirmes que existe evidencia no proporcionada.
+- No conviertas el paquete en denuncia narrativa extensa.
+`.trim();
+  }
+
   return `
 TIPO DOCUMENTAL: GENERAL
 
@@ -266,15 +488,7 @@ function buildRefinePrompt(payload: {
       authorityContacted?: string;
       authorityResponse?: string;
       narrative?: string;
-      normativeMatches?: Array<{
-        normativeSourceId: string;
-        selectedForUse: boolean;
-        selectedForDocuments: string[];
-        functionInCase?: string;
-        rationale?: string;
-        caution?: string;
-        relevance?: string;
-      }>;
+      normativeMatches?: NormativeMatchInput[];
     };
     institutionRecommendation?: {
       primary?: string;

@@ -37,12 +37,12 @@ function textBlob(caseData: CaseRecord) {
 }
 
 const ALT_FORMAL_NAME = 'Autoridad Binacional Autónoma del Sistema Hídrico TDPS (ALT)';
-const ALT_SHORT_NAME = 'ALT – Autoridad del Lago Titicaca';
+const ALT_SHORT_NAME = 'ALT – Autoridad Binacional Autónoma del Sistema Hídrico TDPS';
 
 export function recommendInstitution(caseData: CaseRecord): InstitutionRecommendation {
   const t = textBlob(caseData);
 
-  if (t.includes('cohana') || t.includes('katari') || t.includes('lago') || t.includes('tdps')) {
+  if (t.includes('cohana') || t.includes('katari') || t.includes('lago') || t.includes('tdps') || t.includes('titicaca')) {
     return {
       primary: ALT_FORMAL_NAME,
       secondary: 'Gobierno Autónomo Municipal competente',
@@ -50,31 +50,46 @@ export function recommendInstitution(caseData: CaseRecord): InstitutionRecommend
       reason:
         'El caso parece referirse a una afectación hídrica o lacustre con posible dimensión sistémica o binacional, por lo que puede corresponder una ventanilla especializada del sistema TDPS, además de la actuación municipal.',
       nextStep:
-        'Preparar ficha del caso, solicitud de inspección o atención técnica, y registrar con precisión las gestiones realizadas.'
+        'Preparar ficha del caso, paquete de evidencia y presentación a la ALT, además de registrar con precisión las gestiones realizadas.'
     };
   }
 
-  if (t.includes('amenaza') || t.includes('hostigamiento') || t.includes('represalia')) {
+  if (
+    t.includes('amenaza') ||
+    t.includes('hostigamiento') ||
+    t.includes('represalia') ||
+    t.includes('lideresa') ||
+    t.includes('defensora')
+  ) {
     return {
       primary: 'Defensoría del Pueblo',
       secondary: 'Fiscalía',
       confidence: 'alta',
       reason:
-        'El caso presenta posibles riesgos o represalias contra personas defensoras.',
+        'El caso presenta posibles riesgos, represalias o afectación a personas defensoras o lideresas.',
       nextStep:
-        'Registrar el incidente y preparar presentación a Defensoría y/o denuncia.'
+        'Registrar el incidente, consolidar evidencia y preparar presentación a Defensoría y/o denuncia según corresponda.'
     };
   }
 
-  if (t.includes('residuo') || t.includes('botadero') || t.includes('quema') || t.includes('basura')) {
+  if (
+    t.includes('residuo') ||
+    t.includes('botadero') ||
+    t.includes('quema') ||
+    t.includes('basura') ||
+    t.includes('ptar') ||
+    t.includes('alcantarillado') ||
+    t.includes('aguas residuales') ||
+    t.includes('descarga')
+  ) {
     return {
       primary: 'Gobierno Autónomo Municipal competente',
       secondary: 'Defensoría del Pueblo',
-      confidence: 'media',
+      confidence: 'alta',
       reason:
-        'La gestión inmediata parece recaer en la autoridad municipal o de aseo/medio ambiente.',
+        'La gestión inmediata parece recaer en la autoridad municipal o en la unidad competente de medio ambiente, saneamiento o servicios básicos.',
       nextStep:
-        'Presentar solicitud de inspección y solicitud de información.'
+        'Presentar solicitud de inspección, memorial al municipio y solicitud de información, con evidencia organizada.'
     };
   }
 
@@ -85,7 +100,7 @@ export function recommendInstitution(caseData: CaseRecord): InstitutionRecommend
     reason:
       'La autoridad local suele ser la primera ventanilla para inspección, verificación o gestión inicial.',
     nextStep:
-      'Preparar una presentación inicial con evidencia y solicitud concreta.'
+      'Preparar ficha resumen, memorial inicial con evidencia y una solicitud concreta.'
   };
 }
 
@@ -100,6 +115,7 @@ export function getPreliminaryReading(caseData: CaseRecord): PreliminaryReading 
 
   if (caseData.narrative) findings.push('Caso en construcción con elementos aún generales.');
   if ((caseData.evidence || []).length > 0) findings.push('Existe al menos evidencia inicial registrada.');
+  if ((caseData.events || []).length > 0) findings.push('Existe trazabilidad básica de actuaciones o eventos del caso.');
 
   return {
     dossierState:
@@ -113,13 +129,18 @@ export function getPreliminaryReading(caseData: CaseRecord): PreliminaryReading 
     legalOperationalSuggestion:
       criticalGaps.length > 0
         ? 'Conviene completar primero los vacíos del expediente antes de escalar.'
-        : 'Preparar una solicitud inicial de inspección o atención dirigida a la autoridad competente.'
+        : 'El caso ya permite generar documentos iniciales, organizar evidencia y activar la ruta institucional correspondiente.'
   };
 }
 
 export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
   const t = textBlob(caseData);
   const docs: SuggestedDocument[] = [];
+
+  docs.push({
+    name: 'Ficha resumen del caso',
+    why: 'Sirve como documento base del expediente y resume hechos, actores, evidencia y seguimiento.'
+  });
 
   docs.push({
     name: 'Solicitud de inspección',
@@ -131,6 +152,13 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
     why: 'Sirve para pedir antecedentes, informes, medidas, monitoreos o aclaraciones.'
   });
 
+  if ((caseData.evidence || []).length > 0) {
+    docs.push({
+      name: 'Paquete de evidencia',
+      why: 'Permite organizar la evidencia comunitaria con referencias, metadatos y soporte para presentación institucional.'
+    });
+  }
+
   if (caseData.authorityContacted || caseData.authorityResponse) {
     docs.push({
       name: 'Nota de seguimiento',
@@ -138,10 +166,44 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
     });
   }
 
-  if (t.includes('cohana') || t.includes('katari') || t.includes('lago') || t.includes('tdps')) {
+  if ((caseData.events || []).length > 0) {
+    docs.push({
+      name: 'Cronología del caso',
+      why: 'Ayuda a ordenar actuaciones, hechos y eventos registrados en el tiempo.'
+    });
+  }
+
+  if (
+    t.includes('cohana') ||
+    t.includes('katari') ||
+    t.includes('lago') ||
+    t.includes('tdps') ||
+    t.includes('titicaca')
+  ) {
     docs.push({
       name: 'Presentación a la ALT',
       why: 'Es pertinente cuando el caso tiene dimensión hídrica, lacustre o sistémica vinculada al sistema TDPS.'
+    });
+
+    docs.push({
+      name: 'Paquete de evidencia',
+      why: 'Refuerza la presentación ante la ALT con evidencia organizada y trazable.'
+    });
+  }
+
+  if (
+    t.includes('residuo') ||
+    t.includes('botadero') ||
+    t.includes('quema') ||
+    t.includes('basura') ||
+    t.includes('ptar') ||
+    t.includes('alcantarillado') ||
+    t.includes('aguas residuales') ||
+    t.includes('descarga')
+  ) {
+    docs.push({
+      name: 'Memorial al municipio',
+      why: 'Permite activar formalmente la ruta municipal con un petitorio más completo que una simple solicitud.'
     });
   }
 
@@ -151,7 +213,9 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
     t.includes('represalia') ||
     t.includes('sin respuesta') ||
     t.includes('no respondio') ||
-    t.includes('no respondió')
+    t.includes('no respondió') ||
+    t.includes('lideresa') ||
+    t.includes('defensora')
   ) {
     docs.push({
       name: 'Presentación a Defensoría del Pueblo',
@@ -159,14 +223,30 @@ export function recommendDocuments(caseData: CaseRecord): SuggestedDocument[] {
     });
   }
 
-  if (t.includes('comunidad') || t.includes('territorio') || t.includes('consulta')) {
+  if (
+    t.includes('comunidad') ||
+    t.includes('territorio') ||
+    t.includes('consulta') ||
+    t.includes('asamblea') ||
+    t.includes('acuerdo')
+  ) {
     docs.push({
       name: 'Acta breve comunitaria',
       why: 'Permite registrar acuerdos, mandato y validación comunitaria del caso.'
     });
+
+    docs.push({
+      name: 'Minuta de reunión',
+      why: 'Ayuda a sistematizar reuniones de coordinación, revisión del caso y próximos pasos.'
+    });
   }
 
-  return docs;
+  const seen = new Set<string>();
+  return docs.filter((doc) => {
+    if (seen.has(doc.name)) return false;
+    seen.add(doc.name);
+    return true;
+  });
 }
 
 export { ALT_FORMAL_NAME, ALT_SHORT_NAME };

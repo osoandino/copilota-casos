@@ -1,5 +1,5 @@
 import type { CaseRecord } from '$lib/types/case';
-import type { ActionPattern, OperationalCaseAnalysis } from '$lib/types/operational';
+import type { ActionPattern } from '$lib/types/operational';
 
 function normalize(text: string) {
   return (text || '')
@@ -34,19 +34,55 @@ function deriveKeywords(caseData: CaseRecord) {
   const t = normalize(text);
   const tags: string[] = [];
 
-  if (includesAny(t, ['agua', 'lago', 'bahia', 'cohana', 'katari', 'ribera'])) tags.push('agua');
-  if (includesAny(t, ['contaminacion', 'aguas servidas', 'residual', 'descarga', 'espuma', 'olor', 'algas'])) tags.push('contaminacion_hidrica');
-  if (includesAny(t, ['ptar', 'alcantarillado', 'rebalse', 'saneamiento'])) tags.push('ptar');
-  if (includesAny(t, ['basura', 'residuo', 'botadero', 'quema', 'microbasural', 'plastico'])) tags.push('residuos');
-  if (includesAny(t, ['inundacion', 'desborde', 'riada', 'lluvia', 'cultivos', 'viviendas'])) tags.push('inundacion');
-  if (includesAny(t, ['derrame', 'combustible', 'aceite', 'hidrocarburo', 'mancha'])) tags.push('derrame');
-  if (includesAny(t, ['consulta', 'socializacion', 'proyecto', 'concesion', 'territorio'])) tags.push('consulta');
-  if (includesAny(t, ['amenaza', 'hostigamiento', 'represalia', 'difamacion', 'vigilancia'])) tags.push('defensoras');
+  if (includesAny(t, ['agua', 'lago', 'bahia', 'cohana', 'katari', 'ribera'])) {
+    tags.push('agua');
+  }
+
+  if (
+    includesAny(t, [
+      'contaminacion',
+      'aguas servidas',
+      'residual',
+      'descarga',
+      'espuma',
+      'olor',
+      'algas'
+    ])
+  ) {
+    tags.push('contaminacion_hidrica');
+  }
+
+  if (includesAny(t, ['ptar', 'alcantarillado', 'rebalse', 'saneamiento'])) {
+    tags.push('ptar');
+  }
+
+  if (includesAny(t, ['basura', 'residuo', 'botadero', 'quema', 'microbasural', 'plastico'])) {
+    tags.push('residuos');
+  }
+
+  if (includesAny(t, ['inundacion', 'desborde', 'riada', 'lluvia', 'cultivos', 'viviendas'])) {
+    tags.push('inundacion');
+  }
+
+  if (includesAny(t, ['derrame', 'combustible', 'aceite', 'hidrocarburo', 'mancha'])) {
+    tags.push('derrame');
+  }
+
+  if (includesAny(t, ['consulta', 'socializacion', 'proyecto', 'concesion', 'territorio'])) {
+    tags.push('consulta');
+  }
+
+  if (includesAny(t, ['amenaza', 'hostigamiento', 'represalia', 'difamacion', 'vigilancia'])) {
+    tags.push('defensoras');
+  }
 
   return unique(tags);
 }
 
-function scorePattern(caseData: CaseRecord, pattern: ActionPattern): { score: number; matchedSignals: string[] } {
+function scorePattern(
+  caseData: CaseRecord,
+  pattern: ActionPattern
+): { score: number; matchedSignals: string[] } {
   const text = [
     caseData.title,
     caseData.narrative,
@@ -65,16 +101,42 @@ function scorePattern(caseData: CaseRecord, pattern: ActionPattern): { score: nu
 
   let score = matchedSignals.length * 2;
   const tags = deriveKeywords(caseData);
-  const p = normalize(`${pattern.label} ${pattern.shortDescription}`);
+  const p = normalize(`${pattern.label} ${pattern.shortDescription ?? ''}`);
 
-  if (tags.includes('agua') && includesAny(p, ['agua', 'lago', 'bahia', 'cohana', 'ribera'])) score += 3;
-  if (tags.includes('contaminacion_hidrica') && includesAny(p, ['contaminacion', 'aguas residuales', 'ptar', 'cohana'])) score += 5;
-  if (tags.includes('ptar') && includesAny(p, ['ptar', 'aguas residuales', 'rebalses'])) score += 6;
-  if (tags.includes('residuos') && includesAny(p, ['residuos', 'botaderos', 'quema', 'microbasurales'])) score += 6;
-  if (tags.includes('inundacion') && includesAny(p, ['inundaciones', 'desbordes'])) score += 6;
-  if (tags.includes('derrame') && includesAny(p, ['derrame', 'combustible', 'aceites'])) score += 6;
-  if (tags.includes('consulta') && includesAny(p, ['consulta previa', 'participacion'])) score += 6;
-  if (tags.includes('defensoras') && includesAny(p, ['defensoras', 'hostigamiento', 'amenazas'])) score += 6;
+  if (tags.includes('agua') && includesAny(p, ['agua', 'lago', 'bahia', 'cohana', 'ribera'])) {
+    score += 3;
+  }
+
+  if (
+    tags.includes('contaminacion_hidrica') &&
+    includesAny(p, ['contaminacion', 'aguas residuales', 'ptar', 'cohana'])
+  ) {
+    score += 5;
+  }
+
+  if (tags.includes('ptar') && includesAny(p, ['ptar', 'aguas residuales', 'rebalses'])) {
+    score += 6;
+  }
+
+  if (tags.includes('residuos') && includesAny(p, ['residuos', 'botaderos', 'quema', 'microbasurales'])) {
+    score += 6;
+  }
+
+  if (tags.includes('inundacion') && includesAny(p, ['inundaciones', 'desbordes'])) {
+    score += 6;
+  }
+
+  if (tags.includes('derrame') && includesAny(p, ['derrame', 'combustible', 'aceites'])) {
+    score += 6;
+  }
+
+  if (tags.includes('consulta') && includesAny(p, ['consulta previa', 'participacion'])) {
+    score += 6;
+  }
+
+  if (tags.includes('defensoras') && includesAny(p, ['defensoras', 'hostigamiento', 'amenazas'])) {
+    score += 6;
+  }
 
   if (
     includesAny(t, ['cohana', 'katari', 'bahia de cohana', 'lago menor']) &&
@@ -93,15 +155,35 @@ function scorePattern(caseData: CaseRecord, pattern: ActionPattern): { score: nu
   return { score, matchedSignals };
 }
 
+export type OperationalRouteCandidate = ActionPattern & {
+  score: number;
+  matchedSignals: string[];
+};
+
+export type OperationalRouteAnalysis = {
+  caseId: string;
+  probableActionPatternIds: string[];
+  detectedSignals: string[];
+  missingEvidence: string[];
+  likelyAuthorities: string[];
+  recommendedTemplates: string[];
+  primaryActions: string[];
+  escalationActions: string[];
+  urgency: 'alta' | 'media' | 'baja';
+  summary: string;
+};
+
+export type AnalyzeOperationalRoutesResult = {
+  analysis: OperationalRouteAnalysis;
+  candidates: OperationalRouteCandidate[];
+  primaryCandidate: OperationalRouteCandidate | null;
+  secondaryCandidates: OperationalRouteCandidate[];
+};
+
 export function analyzeOperationalRoutes(
   caseData: CaseRecord,
   patterns: ActionPattern[]
-): {
-  analysis: OperationalCaseAnalysis;
-  candidates: ActionPattern[];
-  primaryCandidate: ActionPattern | null;
-  secondaryCandidates: ActionPattern[];
-} {
+): AnalyzeOperationalRoutesResult {
   const ranked = patterns
     .map((pattern) => {
       const { score, matchedSignals } = scorePattern(caseData, pattern);
@@ -112,23 +194,24 @@ export function analyzeOperationalRoutes(
 
   const topScore = ranked.length > 0 ? ranked[0].score : 0;
 
-  const filtered = ranked.filter(
-    (item) => item.score >= Math.max(6, topScore - 3)
-  );
+  const filtered = ranked.filter((item) => item.score >= Math.max(6, topScore - 3));
 
-  const candidates = filtered.slice(0, 3).map((item) => item.pattern);
+  const candidates: OperationalRouteCandidate[] = filtered.slice(0, 3).map((item) => ({
+    ...item.pattern,
+    score: item.score,
+    matchedSignals: item.matchedSignals
+  }));
+
   const primaryCandidate = candidates.length > 0 ? candidates[0] : null;
   const secondaryCandidates = candidates.slice(1);
 
-  const matchedSignals = unique(filtered.flatMap((item) => item.matchedSignals));
+  const detectedSignals = unique(filtered.flatMap((item) => item.matchedSignals));
   const likelyAuthorities = unique(candidates.flatMap((p) => p.typicalAuthorities));
   const recommendedTemplates = unique(candidates.flatMap((p) => p.templateKeys));
   const primaryActions = unique(candidates.flatMap((p) => p.primaryRoute));
   const escalationActions = unique(candidates.flatMap((p) => p.escalationRoute));
 
-  const expectedEvidence = unique(
-    candidates.flatMap((p) => p.minimumEvidence.map((e) => e.label))
-  );
+  const expectedEvidence = unique(candidates.flatMap((p) => p.minimumEvidence.map((e) => e.label)));
 
   const caseBlob = normalize(
     JSON.stringify({
@@ -143,8 +226,11 @@ export function analyzeOperationalRoutes(
   );
 
   let urgency: 'alta' | 'media' | 'baja' = 'baja';
-  if (candidates.some((p) => p.urgency === 'alta')) urgency = 'alta';
-  else if (candidates.some((p) => p.urgency === 'media')) urgency = 'media';
+  if (candidates.some((p) => p.urgency === 'alta')) {
+    urgency = 'alta';
+  } else if (candidates.some((p) => p.urgency === 'media')) {
+    urgency = 'media';
+  }
 
   const summary =
     candidates.length > 0
@@ -155,7 +241,7 @@ export function analyzeOperationalRoutes(
     analysis: {
       caseId: caseData.id,
       probableActionPatternIds: candidates.map((c) => c.id),
-      detectedSignals: matchedSignals,
+      detectedSignals,
       missingEvidence,
       likelyAuthorities,
       recommendedTemplates,

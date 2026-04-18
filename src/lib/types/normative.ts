@@ -6,7 +6,10 @@ export type DocumentUseKey =
   | 'acta_comunitaria'
   | 'cronologia'
   | 'presentacion_alt'
-  | 'presentacion_defensoria';
+  | 'presentacion_defensoria'
+  | 'memorial_municipio'
+  | 'minuta_reunion'
+  | 'paquete_evidencia';
 
 export type NormativeSource = {
   id: string;
@@ -24,7 +27,7 @@ export type NormativeSource = {
   institutionTags: string[];
   procedureTags: string[];
   territorialTags: string[];
-  documentUseTags: string[];
+  documentUseTags: DocumentUseKey[];
   notes?: string;
 };
 

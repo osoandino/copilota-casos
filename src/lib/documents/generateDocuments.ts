@@ -3,14 +3,14 @@ import type {
   InstitutionRecommendation,
   SuggestedDocument
 } from '$lib/logic/actionRoute';
-import type { NormativeSource } from '$lib/types/normative';
+import type { DocumentUseKey, NormativeSource } from '$lib/types/normative';
 
 export type GeneratedDocument = {
   name: string;
   content: string;
 };
 
-function mapDocNameToUseKey(docName: string) {
+function mapDocNameToUseKey(docName: string): DocumentUseKey | null {
   const normalized = docName.toLowerCase();
 
   if (normalized.includes('ficha')) return 'ficha_resumen';
@@ -21,6 +21,9 @@ function mapDocNameToUseKey(docName: string) {
   if (normalized.includes('cronología') || normalized.includes('cronologia')) return 'cronologia';
   if (normalized.includes('alt')) return 'presentacion_alt';
   if (normalized.includes('defensoría') || normalized.includes('defensoria')) return 'presentacion_defensoria';
+  if (normalized.includes('memorial') && normalized.includes('municip')) return 'memorial_municipio';
+  if (normalized.includes('minuta')) return 'minuta_reunion';
+  if (normalized.includes('paquete') && normalized.includes('evidencia')) return 'paquete_evidencia';
 
   return null;
 }
@@ -57,9 +60,28 @@ function evidenceListText(data: CaseRecord) {
           const type = e.type || 'Evidencia';
           const date = e.date ? ` | fecha: ${e.date}` : '';
           const gps = e.gps ? ` | gps: ${e.gps}` : '';
-          return `${i + 1}. ${type} - ${name}${date}${gps}`;
+          const file = e.fileName ? ` | archivo: ${e.fileName}` : '';
+          return `${i + 1}. ${type} - ${name}${date}${gps}${file}`;
         })
         .join('\n')
+    : 'No se registró evidencia adjunta todavía.';
+}
+
+function detailedEvidenceText(data: CaseRecord) {
+  return data.evidence.length > 0
+    ? data.evidence
+        .map((e, i) => {
+          return [
+            `${i + 1}. EVIDENCIA`,
+            `- Tipo: ${e.type || 'Pendiente'}`,
+            `- Nombre o referencia: ${e.name || 'Pendiente'}`,
+            `- Descripción: ${e.description || 'Pendiente'}`,
+            `- Fecha: ${e.date || 'Pendiente'}`,
+            `- GPS: ${e.gps || 'Pendiente'}`,
+            `- Archivo: ${e.fileName || 'No adjunto'}`
+          ].join('\n');
+        })
+        .join('\n\n')
     : 'No se registró evidencia adjunta todavía.';
 }
 
@@ -121,6 +143,10 @@ function requestedInfoItems(data: CaseRecord) {
   return base.join('\n');
 }
 
+function currentDateText() {
+  return new Date().toLocaleDateString();
+}
+
 export function caseSummaryText(
   data: CaseRecord,
   normativeSources: NormativeSource[]
@@ -176,6 +202,7 @@ export function generateDocumentByType(
     'Autoridad competente';
 
   const evidenceList = evidenceListText(data);
+  const evidenceDetailed = detailedEvidenceText(data);
   const normativeBlock = normativeSupportText(data, docName, normativeSources);
   const previousActions = previousActionsText(data);
 
@@ -278,7 +305,7 @@ export function generateDocumentByType(
       '',
       `Comunidad: ${data.community || '[pendiente]'}`,
       `Caso: ${data.title || '[pendiente]'}`,
-      `Fecha: ${new Date().toLocaleDateString()}`,
+      `Fecha: ${currentDateText()}`,
       '',
       'Resumen del problema:',
       data.narrative || '[Relato pendiente]',
@@ -393,6 +420,102 @@ export function generateDocumentByType(
       '1. Se tenga presente la información del caso en el marco de las atribuciones técnicas e institucionales de la ALT.',
       '2. Se valore la pertinencia de seguimiento técnico, coordinación interinstitucional o atención especializada según corresponda.',
       '3. Se informe, en su caso, si existen antecedentes, monitoreos, articulaciones o recomendaciones relacionadas con el área afectada.'
+    ].join('\n');
+  }
+
+  if (docName === 'Memorial al municipio') {
+    return [
+      'MEMORIAL AL MUNICIPIO',
+      '',
+      `Dirigido a: ${destination}`,
+      `Asunto: Solicitud de actuación municipal respecto al caso ${data.title || 'sin título'}`,
+      '',
+      `Quien suscribe, en representación de ${data.community || 'la comunidad afectada'}, pone en conocimiento de su autoridad la siguiente situación:`,
+      '',
+      'HECHOS RELEVANTES',
+      data.narrative || '[Relato pendiente]',
+      '',
+      'IDENTIFICACIÓN DEL CASO',
+      `- Lugar: ${data.location || '[pendiente]'}`,
+      `- Tipo de problema: ${data.problemType || '[pendiente]'}`,
+      `- Personas o grupos afectados: ${data.affectedPeople || '[pendiente]'}`,
+      '',
+      'GESTIONES PREVIAS',
+      previousActions,
+      '',
+      'EVIDENCIA DISPONIBLE',
+      evidenceList,
+      '',
+      'BASE NORMATIVA SELECCIONADA',
+      normativeBlock,
+      '',
+      'PETITORIO',
+      '1. Se tenga por presentado el presente memorial.',
+      '2. Se identifique la unidad municipal competente.',
+      '3. Se adopten medidas de inspección, seguimiento, respuesta o coordinación institucional, según corresponda.',
+      '4. Se responda formalmente por escrito dentro de plazo razonable.'
+    ].join('\n');
+  }
+
+  if (docName === 'Minuta de reunión') {
+    return [
+      'MINUTA DE REUNIÓN',
+      '',
+      `Fecha: ${currentDateText()}`,
+      `Caso: ${data.title || '[pendiente]'}`,
+      `Comunidad: ${data.community || '[pendiente]'}`,
+      `Lugar o área afectada: ${data.location || '[pendiente]'}`,
+      '',
+      'OBJETO DE LA REUNIÓN',
+      `Revisión del caso relacionado con ${issue.toLowerCase()}.`,
+      '',
+      'RESUMEN DEL CASO',
+      data.narrative || '[Relato pendiente]',
+      '',
+      'EVIDENCIA REVISADA',
+      evidenceList,
+      '',
+      'BASE NORMATIVA RELEVANTE',
+      normativeBlock,
+      '',
+      'ACUERDOS / PUNTOS DE SEGUIMIENTO',
+      '1. Validar hechos y evidencia disponible.',
+      '2. Confirmar institución competente y ruta de acción.',
+      '3. Definir siguientes gestiones y responsables.',
+      '4. Registrar fecha tentativa de seguimiento.'
+    ].join('\n');
+  }
+
+  if (docName === 'Paquete de evidencia') {
+    return [
+      'PAQUETE DE EVIDENCIA',
+      '',
+      `Caso: ${data.title || '[pendiente]'}`,
+      `ID del caso: ${data.id}`,
+      `Comunidad: ${data.community || '[pendiente]'}`,
+      `Lugar: ${data.location || '[pendiente]'}`,
+      `Fecha de compilación: ${currentDateText()}`,
+      '',
+      'DESCRIPCIÓN GENERAL DEL CASO',
+      data.narrative || '[Relato pendiente]',
+      '',
+      'PERSONAS O GRUPOS AFECTADOS',
+      data.affectedPeople || '[pendiente]',
+      '',
+      'INSTITUCIÓN O RUTA RELACIONADA',
+      institutionRecommendation?.primary || data.authorityContacted || '[pendiente]',
+      '',
+      'BASE NORMATIVA SELECCIONADA',
+      normativeBlock,
+      '',
+      'INVENTARIO DE EVIDENCIA',
+      evidenceDetailed,
+      '',
+      'GESTIONES PREVIAS',
+      previousActions,
+      '',
+      'OBSERVACIONES',
+      'Este paquete resume la evidencia comunitaria registrada para fines de seguimiento, presentación institucional y respaldo documental.'
     ].join('\n');
   }
 

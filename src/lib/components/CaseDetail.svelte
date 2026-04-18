@@ -214,14 +214,17 @@
   let currentSection = $state('Narrar');
 
   const documentUseOptions: { key: DocumentUseKey; label: string }[] = [
-    { key: 'ficha_resumen', label: 'Ficha resumen' },
+    { key: 'ficha_resumen', label: 'Ficha resumen del caso' },
     { key: 'solicitud_inspeccion', label: 'Solicitud de inspección' },
     { key: 'solicitud_informacion', label: 'Solicitud de información' },
     { key: 'nota_seguimiento', label: 'Nota de seguimiento' },
-    { key: 'acta_comunitaria', label: 'Acta comunitaria' },
-    { key: 'cronologia', label: 'Cronología' },
+    { key: 'acta_comunitaria', label: 'Acta breve comunitaria' },
+    { key: 'cronologia', label: 'Cronología del caso' },
     { key: 'presentacion_alt', label: 'Presentación a la ALT' },
-    { key: 'presentacion_defensoria', label: 'Presentación a Defensoría del Pueblo' }
+    { key: 'presentacion_defensoria', label: 'Presentación a la Defensoría del Pueblo' },
+    { key: 'memorial_municipio', label: 'Memorial al municipio' },
+    { key: 'minuta_reunion', label: 'Minuta de reunión' },
+    { key: 'paquete_evidencia', label: 'Paquete de evidencia' }
   ];
 
   function getNormativeMatch(normId: string) {

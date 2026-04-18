@@ -82,15 +82,25 @@
     return String(error);
   }
 
-  const documentNameMap: Record<string, string> = {
+  function normalizeRelevance(value?: string): 'alta' | 'media' | 'baja' {
+    const normalized = (value || '').toLowerCase();
+    if (normalized === 'alta') return 'alta';
+    if (normalized === 'baja') return 'baja';
+    return 'media';
+  }
+
+  const documentNameMap: Record<DocumentUseKey, string> = {
     ficha_resumen: 'Ficha resumen del caso',
     solicitud_inspeccion: 'Solicitud de inspección',
     solicitud_informacion: 'Solicitud de información',
     nota_seguimiento: 'Nota de seguimiento',
-    acta_comunitaria: 'Acta comunitaria',
-    cronologia: 'Cronología',
+    acta_comunitaria: 'Acta breve comunitaria',
+    cronologia: 'Cronología del caso',
     presentacion_alt: 'Presentación a la ALT',
-    presentacion_defensoria: 'Presentación a la Defensoría del Pueblo'
+    presentacion_defensoria: 'Presentación a la Defensoría del Pueblo',
+    memorial_municipio: 'Memorial al municipio',
+    minuta_reunion: 'Minuta de reunión',
+    paquete_evidencia: 'Paquete de evidencia'
   };
 
   let status = $state('Inicializando...');
@@ -436,7 +446,7 @@
       const aiOutput = (result.output || []) as NormativeAIEvaluation[];
       const currentMatches = currentCase.normativeMatches || [];
 
-      const updatedMatches = aiOutput.map((item, index) => {
+      const updatedMatches: CaseNormativeMatch[] = aiOutput.map((item, index) => {
         const existing = currentMatches.find(
           (m) => m.normativeSourceId === item.normativeSourceId
         );
@@ -445,7 +455,7 @@
           id: existing?.id || `${currentCase.id}-ai-norm-${index + 1}`,
           caseId: currentCase.id,
           normativeSourceId: item.normativeSourceId,
-          relevance: item.relevance,
+          relevance: normalizeRelevance(item.relevance),
           functionInCase: item.functionInCase,
           rationale: item.rationale,
           triggeringFact: item.triggeringFact,
@@ -479,7 +489,11 @@
     const target = cases.find((c) => c.id === currentCase.id);
     if (!target) return;
 
-    const plainMatches = toPlain(updatedMatches);
+    const plainMatches = toPlain(updatedMatches).map((match) => ({
+      ...match,
+      relevance: normalizeRelevance(match.relevance),
+      selectedForDocuments: [...(match.selectedForDocuments || [])]
+    })) as CaseNormativeMatch[];
 
     target.normativeMatches = plainMatches;
     target.updatedAt = new Date().toISOString();
@@ -500,10 +514,18 @@
       (match) => match.normativeSourceId === normativeSourceId
     );
 
-    const baseMatches = exists
-      ? normativeMatches
+    const baseMatches: CaseNormativeMatch[] = exists
+      ? normativeMatches.map((match) => ({
+          ...match,
+          relevance: normalizeRelevance(match.relevance),
+          selectedForDocuments: [...(match.selectedForDocuments || [])]
+        }))
       : [
-          ...normativeMatches,
+          ...normativeMatches.map((match) => ({
+            ...match,
+            relevance: normalizeRelevance(match.relevance),
+            selectedForDocuments: [...(match.selectedForDocuments || [])]
+          })),
           {
             id: `${currentCase?.id}-norm-added-${normativeSourceId}`,
             caseId: currentCase?.id || '',
@@ -521,20 +543,22 @@
           }
         ];
 
-    const updated = baseMatches.map((match) =>
+    const updated: CaseNormativeMatch[] = baseMatches.map((match) =>
       match.normativeSourceId === normativeSourceId
         ? {
             ...match,
+            relevance: normalizeRelevance(match.relevance),
             selectedForUse: selected,
             selectedForDocuments: selected ? [...match.selectedForDocuments] : []
           }
         : {
             ...match,
+            relevance: normalizeRelevance(match.relevance),
             selectedForDocuments: [...match.selectedForDocuments]
           }
     );
 
-    await persistNormativeMatches(toPlain(updated));
+    await persistNormativeMatches(updated);
   }
 
   async function toggleNormativeDocumentUse(
@@ -546,10 +570,18 @@
       (match) => match.normativeSourceId === normativeSourceId
     );
 
-    const baseMatches = exists
-      ? normativeMatches
+    const baseMatches: CaseNormativeMatch[] = exists
+      ? normativeMatches.map((match) => ({
+          ...match,
+          relevance: normalizeRelevance(match.relevance),
+          selectedForDocuments: [...(match.selectedForDocuments || [])]
+        }))
       : [
-          ...normativeMatches,
+          ...normativeMatches.map((match) => ({
+            ...match,
+            relevance: normalizeRelevance(match.relevance),
+            selectedForDocuments: [...(match.selectedForDocuments || [])]
+          })),
           {
             id: `${currentCase?.id}-norm-added-${normativeSourceId}`,
             caseId: currentCase?.id || '',
@@ -567,10 +599,11 @@
           }
         ];
 
-    const updated = baseMatches.map((match) => {
+    const updated: CaseNormativeMatch[] = baseMatches.map((match) => {
       if (match.normativeSourceId !== normativeSourceId) {
         return {
           ...match,
+          relevance: normalizeRelevance(match.relevance),
           selectedForDocuments: [...match.selectedForDocuments]
         };
       }
@@ -581,12 +614,13 @@
 
       return {
         ...match,
+        relevance: normalizeRelevance(match.relevance),
         selectedForUse: nextDocuments.length > 0 ? true : match.selectedForUse,
         selectedForDocuments: [...nextDocuments]
       };
     });
 
-    await persistNormativeMatches(toPlain(updated));
+    await persistNormativeMatches(updated);
   }
 
   async function createTestCase() {
@@ -760,6 +794,18 @@
     selectedCaseId = target.id;
   }
 
+  async function handleCaseUpdate(field: string, value: string) {
+    await updateCaseField(field as keyof CaseRecord, value);
+  }
+
+  async function handleEvidenceUpdate(
+    evidenceId: string,
+    field: string,
+    value: string
+  ) {
+    await updateEvidence(evidenceId, field as keyof Evidence, value);
+  }
+
   function mergeNormativeMatches(
     caseData: CaseRecord | null,
     candidateNorms: typeof normativeSeed
@@ -779,15 +825,24 @@
         ? {
             ...gen,
             ...old,
+            relevance: normalizeRelevance(old.relevance),
             selectedForDocuments: [...(old.selectedForDocuments || [])]
           }
-        : gen;
+        : {
+            ...gen,
+            relevance: normalizeRelevance(gen.relevance),
+            selectedForDocuments: [...(gen.selectedForDocuments || [])]
+          };
     });
 
     const generatedIds = new Set(generated.map((g) => g.normativeSourceId));
-    const legacyOnly = persisted.filter(
-      (p) => !generatedIds.has(p.normativeSourceId)
-    );
+    const legacyOnly = persisted
+      .filter((p) => !generatedIds.has(p.normativeSourceId))
+      .map((p) => ({
+        ...p,
+        relevance: normalizeRelevance(p.relevance),
+        selectedForDocuments: [...(p.selectedForDocuments || [])]
+      }));
 
     return [...merged, ...legacyOnly];
   }
@@ -915,7 +970,7 @@
 </script>
 
 <svelte:head>
-  <title>Copilota del Agua TDPS</title>
+  <title>Yanapa Red</title>
 </svelte:head>
 
 <div style="padding: 2rem; font-family: sans-serif;">
@@ -1155,13 +1210,13 @@
     <div>
       <CaseDetail
         caseData={currentCase}
-        onUpdate={updateCaseField}
+        onUpdate={handleCaseUpdate}
         onAddEvidence={addEvidence}
-        onUpdateEvidence={updateEvidence}
+        onUpdateEvidence={handleEvidenceUpdate}
         onDeleteEvidence={deleteEvidence}
         onUploadEvidenceFile={uploadEvidenceFile}
         {institutionRecommendation}
-        {preliminaryReading}
+        preliminaryReading={preliminaryReading as any}
         {suggestedDocuments}
         {generatedDocuments}
         selectedDocumentName={selectedDocumentName}
