@@ -217,6 +217,34 @@
 
   let currentSection = $state('Narrar');
 
+  // Detecta automáticamente qué secciones ya tienen contenido suficiente
+  const completedSections = $derived(
+    (() => {
+      const done: string[] = [];
+
+      // Narrar: tiene narrativa escrita
+      if (caseData?.narrative?.trim()) done.push('Narrar');
+
+      // Hechos: al menos comunidad o ubicación registradas
+      if (caseData?.community?.trim() || caseData?.location?.trim() || caseData?.dateStarted?.trim())
+        done.push('Hechos');
+
+      // Evidencia: al menos un elemento cargado
+      if ((caseData?.evidence?.length ?? 0) > 0) done.push('Evidencia');
+
+      // Ruta de acción: se ejecutó el análisis IA
+      if (llmReading != null) done.push('Ruta de acción');
+
+      // Marco normativo: al menos una norma seleccionada para uso
+      if (normativeMatches?.some((m) => m.selectedForUse)) done.push('Marco normativo');
+
+      // Documentos: al menos un documento generado
+      if (generatedDocuments?.length > 0) done.push('Documentos');
+
+      return done;
+    })()
+  );
+
   function prettyList(values?: string[]) {
     return values && values.length > 0 ? values.join(' · ') : '—';
   }
@@ -262,6 +290,7 @@
     <CaseSections
       currentSection={currentSection}
       onChange={(section) => (currentSection = section)}
+      completedSections={completedSections}
     />
 
     {#if currentSection === 'Narrar'}
@@ -416,6 +445,7 @@
 
     {#if currentSection === 'Documentos'}
       <CaseDocumentsSection
+        {caseData}
         {suggestedDocuments}
         {generatedDocuments}
         {selectedDocumentName}

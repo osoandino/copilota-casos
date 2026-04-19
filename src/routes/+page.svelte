@@ -678,6 +678,7 @@
       type: '',
       name: '',
       description: '',
+      whatItShows: '',
       gps: '',
       date: '',
       fileName: '',

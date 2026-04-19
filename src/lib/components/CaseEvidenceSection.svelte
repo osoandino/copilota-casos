@@ -4,6 +4,7 @@
     type?: string;
     name?: string;
     description?: string;
+    whatItShows?: string;
     gps?: string;
     date?: string;
     fileName?: string;
@@ -15,19 +16,208 @@
     evidence?: EvidenceItem[];
   } | null;
 
+  const evidenceTypeOptions = [
+    'Fotografía',
+    'Video',
+    'Audio',
+    'Testimonio',
+    'Documento oficial',
+    'Documento comunitario',
+    'Acta',
+    'Mapa / croquis',
+    'Registro GPS',
+    'Informe técnico',
+    'Muestra / análisis',
+    'Otro'
+  ];
+
   let {
     caseData,
     onAddEvidence,
     onUpdateEvidence,
     onDeleteEvidence,
     onUploadEvidenceFile
-  }: {
+    }: {
     caseData: CaseData;
     onAddEvidence: () => void;
     onUpdateEvidence: (evidenceId: string, field: string, value: string) => void;
     onDeleteEvidence: (evidenceId: string) => void;
     onUploadEvidenceFile: (evidenceId: string, file: File) => void;
-  } = $props();
+    } = $props();
+
+  function assessEvidenceItem(e: EvidenceItem) {
+    const missing: string[] = [];
+
+    if (!(e.type || e.name)) {
+      missing.push('tipo o nombre de referencia');
+    }
+
+    if (!e.description) {
+      missing.push('descripción');
+    }
+
+    if (!e.whatItShows) {
+      missing.push('qué demuestra');
+    }
+
+    if (!(e.date || e.gps || e.fileName)) {
+      missing.push('fecha, GPS o archivo de respaldo');
+    }
+
+    let status: 'sólida' | 'parcial' | 'débil' = 'sólida';
+    if (missing.length === 1) status = 'parcial';
+    if (missing.length >= 2) status = 'débil';
+
+    return { missing, status };
+  }
+
+  function getStatusStyles(status: 'sólida' | 'parcial' | 'débil') {
+    if (status === 'sólida') {
+      return {
+        background: '#eaf7ee',
+        border: '#b9e1c1',
+        color: '#1f6b35'
+      };
+    }
+
+    if (status === 'parcial') {
+      return {
+        background: '#fff8e8',
+        border: '#efd99a',
+        color: '#8a6412'
+      };
+    }
+
+    return {
+      background: '#fdeeee',
+      border: '#e8b8b8',
+      color: '#9a2f2f'
+    };
+  }
+
+  function evidenceSummary() {
+    const evidence = caseData?.evidence || [];
+    const assessed = evidence.map((e) => assessEvidenceItem(e));
+
+    return {
+      total: evidence.length,
+      solid: assessed.filter((a) => a.status === 'sólida').length,
+      partial: assessed.filter((a) => a.status === 'parcial').length,
+      weak: assessed.filter((a) => a.status === 'débil').length
+    };
+  }
+
+  function packageReadiness() {
+    const summary = evidenceSummary();
+
+    if (summary.total === 0) {
+      return {
+        level: 'débil' as const,
+        title: 'Expediente todavía sin base de evidencia',
+        message:
+          'Aún no hay evidencia registrada. Antes de generar un paquete fuerte, conviene incorporar al menos una referencia clara, una descripción, qué demuestra y algún respaldo temporal, espacial o documental.'
+      };
+    }
+
+    if (summary.solid === summary.total) {
+      return {
+        level: 'lista' as const,
+        title: 'Expediente con base de evidencia razonablemente sólida',
+        message:
+          'La evidencia registrada tiene un nivel útil de completitud para sostener mejor el paquete de evidencia, aunque siempre puede fortalecerse con mayor precisión.'
+      };
+    }
+
+    if (summary.solid >= Math.ceil(summary.total / 2)) {
+      return {
+        level: 'intermedia' as const,
+        title: 'Expediente usable, pero todavía reforzable',
+        message:
+          'Ya existe una base de evidencia útil, pero varias piezas todavía necesitan completar descripción, qué demuestra, fecha, GPS o archivo de respaldo para fortalecer una presentación institucional.'
+      };
+    }
+
+    return {
+      level: 'débil' as const,
+      title: 'Expediente todavía débil para un paquete de evidencia fuerte',
+      message:
+        'La mayor parte de la evidencia aún es parcial o débil. Conviene completar metadatos, valor probatorio y soportes antes de usar el paquete como respaldo principal.'
+      };
+  }
+
+  function packageReadinessStyles(level: 'lista' | 'intermedia' | 'débil') {
+    if (level === 'lista') {
+      return {
+        background: '#edf8f0',
+        border: '#b9e1c1',
+        color: '#1f6b35'
+      };
+    }
+
+    if (level === 'intermedia') {
+      return {
+        background: '#fff8e9',
+        border: '#efd99a',
+        color: '#8a6412'
+      };
+    }
+
+    return {
+      background: '#fdeeee',
+      border: '#e8b8b8',
+      color: '#9a2f2f'
+    };
+  }
+
+  function evidenceTypeHelp(type?: string) {
+    const t = (type || '').toLowerCase();
+
+    if (t === 'fotografía') {
+      return 'Describe qué se ve, desde dónde fue tomada y qué parte del problema permite constatar.';
+    }
+
+    if (t === 'video') {
+      return 'Aclara qué registra el video, su duración aproximada y qué hecho permite observar.';
+    }
+
+    if (t === 'audio') {
+      return 'Indica quién habla o qué se escucha y por qué ese audio es relevante para el caso.';
+    }
+
+    if (t === 'testimonio') {
+      return 'Resume quién testimonia, qué observó directamente y qué parte del caso ayuda a confirmar.';
+    }
+
+    if (t === 'documento oficial') {
+      return 'Identifica entidad emisora, fecha y qué aspecto institucional o técnico acredita.';
+    }
+
+    if (t === 'documento comunitario') {
+      return 'Explica quién lo elaboró, en qué contexto y qué hecho o decisión comunitaria respalda.';
+    }
+
+    if (t === 'acta') {
+      return 'Aclara fecha, participantes y qué acuerdo, constatación o mandato deja asentado.';
+    }
+
+    if (t === 'mapa / croquis') {
+      return 'Describe qué ubica o delimita y cómo ayuda a entender espacialmente el caso.';
+    }
+
+    if (t === 'registro gps') {
+      return 'Indica qué punto marca y por qué esa ubicación es importante dentro del expediente.';
+    }
+
+    if (t === 'informe técnico') {
+      return 'Resume qué evaluó el informe, quién lo elaboró y qué conclusión útil aporta.';
+    }
+
+    if (t === 'muestra / análisis') {
+      return 'Describe qué se tomó o analizó, cuándo y qué resultado o indicio relevante aporta.';
+    }
+
+    return 'Precisa qué contiene esta evidencia y cómo fortalece el caso.';
+  }
 </script>
 
 <section
@@ -56,11 +246,62 @@
     </button>
   </div>
 
+  <div
+    style={`
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid ${packageReadinessStyles(packageReadiness().level).border};
+      border-radius: 16px;
+      background: ${packageReadinessStyles(packageReadiness().level).background};
+      color: ${packageReadinessStyles(packageReadiness().level).color};
+    `}
+  >
+    <div style="font-weight: 800; margin-bottom: 0.45rem;">
+      {packageReadiness().title}
+    </div>
+    <div style="line-height: 1.55;">
+      {packageReadiness().message}
+    </div>
+  </div>
+
+  <div
+    style="
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #e2ebf3;
+      border-radius: 16px;
+      background: #f8fbff;
+    "
+  >
+    <div style="font-weight: 700; margin-bottom: 0.55rem;">Resumen de completitud</div>
+    <div
+      style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.6rem;
+        color: #516273;
+        line-height: 1.55;
+      "
+    >
+      <div><strong>Total registradas:</strong> {evidenceSummary().total}</div>
+      <div><strong>Sólidas:</strong> {evidenceSummary().solid}</div>
+      <div><strong>Parciales:</strong> {evidenceSummary().partial}</div>
+      <div><strong>Débiles:</strong> {evidenceSummary().weak}</div>
+    </div>
+
+    <div style="margin-top: 0.7rem; color: #607386; line-height: 1.55;">
+      Una evidencia sólida tiene al menos referencia clara, descripción, qué demuestra y alguna base de trazabilidad como fecha, GPS o archivo adjunto.
+    </div>
+  </div>
+
   <div style="display: grid; gap: 1rem; margin-top: 1rem;">
     {#if !caseData?.evidence || caseData.evidence.length === 0}
       <div style="color: #5f7286;">Aún no se registró evidencia.</div>
     {:else}
       {#each caseData.evidence as evidence}
+        {@const assessed = assessEvidenceItem(evidence)}
+        {@const statusStyles = getStatusStyles(assessed.status)}
+
         <div
           style="
             padding: 1rem;
@@ -71,6 +312,68 @@
         >
           <div
             style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 1rem;
+              flex-wrap: wrap;
+              margin-bottom: 0.9rem;
+            "
+          >
+            <div>
+              <div style="font-weight: 800; color: #1a2d3f;">
+                {evidence.name || evidence.type || 'Evidencia sin nombre'}
+              </div>
+              <div style="margin-top: 0.2rem; color: #5f7286; line-height: 1.45;">
+                {evidence.type || 'Tipo pendiente'}
+                {#if evidence.date}
+                  · {evidence.date}
+                {/if}
+                {#if evidence.gps}
+                  · GPS registrado
+                {/if}
+                {#if evidence.fileName}
+                  · Archivo adjunto
+                {/if}
+              </div>
+            </div>
+
+            <div
+              style={`
+                padding: 0.4rem 0.7rem;
+                border-radius: 999px;
+                border: 1px solid ${statusStyles.border};
+                background: ${statusStyles.background};
+                color: ${statusStyles.color};
+                font-weight: 700;
+                font-size: 0.92rem;
+              `}
+            >
+              Evidencia {assessed.status}
+            </div>
+          </div>
+
+          {#if assessed.missing.length > 0}
+            <div
+              style="
+                margin-bottom: 0.9rem;
+                padding: 0.85rem;
+                border-radius: 12px;
+                background: #fff8f0;
+                border: 1px solid #f0dcc1;
+                color: #7a5a1d;
+                line-height: 1.5;
+              "
+            >
+              <strong>Faltan datos útiles para fortalecer esta evidencia:</strong>
+              <div style="margin-top: 0.3rem;">
+                {assessed.missing.join(' · ')}
+              </div>
+            </div>
+          {/if}
+
+          <div
+            style="
               display: grid;
               grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
               gap: 0.8rem;
@@ -78,16 +381,21 @@
           >
             <label>
               <div style="margin-bottom: 0.35rem; font-weight: 600;">Tipo</div>
-              <input
+              <select
                 value={evidence.type || ''}
-                oninput={(e) =>
+                onchange={(e) =>
                   onUpdateEvidence(
                     evidence.id,
                     'type',
-                    (e.currentTarget as HTMLInputElement).value
+                    (e.currentTarget as HTMLSelectElement).value
                   )}
-                style="width: 100%; padding: 0.65rem; border: 1px solid #cfd8e3; border-radius: 12px;"
-              />
+                style="width: 100%; padding: 0.65rem; border: 1px solid #cfd8e3; border-radius: 12px; background: white;"
+              >
+                <option value="">Seleccionar tipo</option>
+                {#each evidenceTypeOptions as option}
+                  <option value={option}>{option}</option>
+                {/each}
+              </select>
             </label>
 
             <label>
@@ -133,6 +441,10 @@
             </label>
           </div>
 
+          <div style="margin-top: 0.35rem; color: #66798b; font-size: 0.92rem; line-height: 1.45;">
+            {evidenceTypeHelp(evidence.type)}
+          </div>
+
           <label style="display: block; margin-top: 0.8rem;">
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Descripción</div>
             <textarea
@@ -146,6 +458,24 @@
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             >{evidence.description || ''}</textarea>
           </label>
+
+          <label style="display: block; margin-top: 0.8rem;">
+            <div style="margin-bottom: 0.35rem; font-weight: 600;">Qué demuestra esta evidencia</div>
+            <textarea
+              rows="3"
+              oninput={(e) =>
+                onUpdateEvidence(
+                  evidence.id,
+                  'whatItShows',
+                  (e.currentTarget as HTMLTextAreaElement).value
+                )}
+              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
+            >{evidence.whatItShows || ''}</textarea>
+          </label>
+
+          <div style="margin-top: 0.35rem; color: #66798b; font-size: 0.92rem; line-height: 1.45;">
+            Explica qué prueba, confirma o refuerza esta pieza dentro del caso.
+          </div>
 
           <div style="margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
             <input

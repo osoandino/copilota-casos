@@ -5,6 +5,7 @@ import type {
 } from '$lib/logic/actionRoute';
 import type { DocumentUseKey, NormativeSource } from '$lib/types/normative';
 import {
+  documentRegistry,
   getDocumentName,
   matchDocumentUseKeyFromName
 } from '$lib/config/documentRegistry';
@@ -16,11 +17,6 @@ export type GeneratedDocument = {
 
 function resolveDocumentUseKey(docName: string): DocumentUseKey | null {
   return matchDocumentUseKeyFromName(docName);
-}
-
-function canonicalDocumentName(docName: string): string {
-  const key = resolveDocumentUseKey(docName);
-  return key ? getDocumentName(key) : docName;
 }
 
 function normativeSupportText(
@@ -61,24 +57,144 @@ function evidenceListText(data: CaseRecord) {
     : 'No se registró evidencia adjunta todavía.';
 }
 
+function assessEvidenceItem(e: {
+  type?: string;
+  name?: string;
+  description?: string;
+  whatItShows?: string;
+  gps?: string;
+  date?: string;
+  fileName?: string;
+}) {
+  const missing: string[] = [];
+
+  if (!(e.type || e.name)) {
+    missing.push('tipo o nombre de referencia');
+  }
+
+  if (!e.whatItShows) {
+    missing.push('qué demuestra');
+  }
+
+  if (!e.description) {
+    missing.push('descripción');
+  }
+
+  if (!(e.date || e.gps || e.fileName)) {
+    missing.push('fecha, GPS o archivo de respaldo');
+  }
+
+  let status: 'sólida' | 'parcial' | 'débil' = 'sólida';
+  if (missing.length === 1) status = 'parcial';
+  if (missing.length >= 2) status = 'débil';
+
+  return {
+    missing,
+    status
+  };
+}
+
 function detailedEvidenceText(data: CaseRecord) {
   const evidence = data.evidence || [];
 
   return evidence.length > 0
     ? evidence
         .map((e, i) => {
+          const assessed = assessEvidenceItem(e);
+
           return [
             `${i + 1}. EVIDENCIA`,
+            `- Estado de completitud: ${assessed.status}`,
             `- Tipo: ${e.type || 'Pendiente'}`,
             `- Nombre o referencia: ${e.name || 'Pendiente'}`,
             `- Descripción: ${e.description || 'Pendiente'}`,
+            `- Qué demuestra: ${e.whatItShows || 'Pendiente'}`,
             `- Fecha: ${e.date || 'Pendiente'}`,
             `- GPS: ${e.gps || 'Pendiente'}`,
-            `- Archivo: ${e.fileName || 'No adjunto'}`
+            `- Archivo: ${e.fileName || 'No adjunto'}`,
+            `- Vacíos detectados: ${
+              assessed.missing.length > 0 ? assessed.missing.join('; ') : 'sin vacíos críticos'
+            }`
           ].join('\n');
         })
         .join('\n\n')
     : 'No se registró evidencia adjunta todavía.';
+}
+
+function evidenceCompletenessSummaryText(data: CaseRecord) {
+  const evidence = data.evidence || [];
+
+  if (evidence.length === 0) {
+    return [
+      'Total de evidencias registradas: 0',
+      'Evidencias con metadatos mínimos: 0',
+      'Evidencias parciales: 0',
+      'Evidencias débiles: 0',
+      'Observación general: todavía no existe evidencia registrada para sustentar el caso.'
+    ].join('\n');
+  }
+
+  const assessed = evidence.map((e) => assessEvidenceItem(e));
+  const solid = assessed.filter((a) => a.status === 'sólida').length;
+  const partial = assessed.filter((a) => a.status === 'parcial').length;
+  const weak = assessed.filter((a) => a.status === 'débil').length;
+
+  return [
+    `Total de evidencias registradas: ${evidence.length}`,
+    `Evidencias con metadatos mínimos: ${solid}`,
+    `Evidencias parciales: ${partial}`,
+    `Evidencias débiles: ${weak}`,
+    solid === evidence.length
+      ? 'Observación general: el conjunto de evidencia tiene una base razonablemente completa para revisión.'
+      : 'Observación general: conviene completar metadatos faltantes antes de una presentación institucional más fuerte.'
+  ].join('\n');
+}
+
+function evidenceCriticalGapsText(data: CaseRecord) {
+  const evidence = data.evidence || [];
+
+  if (evidence.length === 0) {
+    return 'No existe evidencia registrada. Es prioritario incorporar al menos fotografías, registro descriptivo y referencia temporal o espacial.';
+  }
+
+  const gapCounter = new Map<string, number>();
+
+  evidence.forEach((e) => {
+    const assessed = assessEvidenceItem(e);
+    assessed.missing.forEach((gap) => {
+      gapCounter.set(gap, (gapCounter.get(gap) || 0) + 1);
+    });
+  });
+
+  if (gapCounter.size === 0) {
+    return 'No se detectan vacíos críticos generales en la evidencia registrada.';
+  }
+
+  return [...gapCounter.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([gap, count], i) => `${i + 1}. ${gap}: faltante en ${count} evidencia(s).`)
+    .join('\n');
+}
+
+function evidencePresentationReadinessText(data: CaseRecord) {
+  const evidence = data.evidence || [];
+
+  if (evidence.length === 0) {
+    return 'El expediente todavía no está listo para un paquete de evidencia, porque no cuenta con soportes registrados.';
+  }
+
+  const assessed = evidence.map((e) => assessEvidenceItem(e));
+  const solid = assessed.filter((a) => a.status === 'sólida').length;
+
+  if (solid === evidence.length) {
+    return 'La evidencia registrada presenta un nivel razonable de completitud para acompañar presentaciones institucionales, aunque siempre puede fortalecerse con mayor precisión técnica.';
+  }
+
+  if (solid >= Math.ceil(evidence.length / 2)) {
+    return 'El expediente cuenta con una base útil de evidencia, pero conviene completar metadatos y soportes faltantes antes de una presentación de mayor exigencia.';
+  }
+
+  return 'La evidencia todavía es insuficiente o desigual en calidad. Conviene reforzar descripción, referencia temporal/espacial y respaldo documental o fotográfico antes de una presentación formal.';
 }
 
 function previousActionsText(data: CaseRecord) {
@@ -351,18 +467,22 @@ export function generateDocumentByType(
         'PRESENTACIÓN A LA DEFENSORÍA DEL PUEBLO',
         '',
         'Dirigido a: Defensoría del Pueblo',
-        `Asunto: Solicitud de intervención y seguimiento respecto al caso ${data.title || 'sin título'}`,
+        `Asunto: Puesta en conocimiento y solicitud de intervención defensorial respecto al caso ${data.title || 'sin título'}`,
         '',
-        'Por la presente se pone en conocimiento de la Defensoría del Pueblo una situación que podría involucrar afectación de derechos y/o insuficiente respuesta institucional.',
+        'Por la presente se pone en conocimiento de la Defensoría del Pueblo una situación que, de acuerdo con la información registrada, podría involucrar afectación de derechos y/o una respuesta institucional insuficiente frente a hechos que impactan a personas, comunidad o territorio.',
         '',
         'IDENTIFICACIÓN DEL CASO',
         `- Título del caso: ${data.title || '[pendiente]'}`,
         `- Lugar: ${data.location || '[pendiente]'}`,
         `- Comunidad o población afectada: ${data.community || '[pendiente]'}`,
         `- Personas o grupos afectados: ${data.affectedPeople || '[pendiente]'}`,
+        `- Tipo de problema reportado: ${data.problemType || '[pendiente]'}`,
         '',
         'HECHOS RELEVANTES',
         data.narrative || '[Relato pendiente]',
+        '',
+        'AFECTACIÓN Y PREOCUPACIÓN DE DERECHOS',
+        `De acuerdo con la información disponible, la situación descrita podría comprometer derechos vinculados al agua, al ambiente, a la salud, a la participación o a la debida atención institucional, afectando a ${data.affectedPeople || 'la población involucrada'} y justificando seguimiento desde la Defensoría del Pueblo.`,
         '',
         'GESTIONES PREVIAS',
         previousActions,
@@ -374,10 +494,14 @@ export function generateDocumentByType(
         normativeBlock,
         '',
         'PETITORIO',
-        '1. Se admita la presente como comunicación de posible afectación de derechos.',
-        '2. Se realice seguimiento al caso y a la actuación de las instituciones competentes.',
-        '3. Se requiera información, exhortación o intervención institucional, si así se considera pertinente.',
-        '4. Se brinde orientación o acompañamiento según corresponda.'
+        '1. Se tenga por presentada la presente comunicación como puesta en conocimiento de una posible afectación de derechos.',
+        '2. Se valore la apertura de seguimiento defensorial al caso y a la actuación de las instituciones competentes.',
+        '3. Se requiera, cuando corresponda, información a las instancias involucradas sobre actuaciones, omisiones, medidas adoptadas o respuesta pendiente.',
+        '4. Se considere la emisión de exhortación, recomendación, acompañamiento u orientación institucional, según corresponda.',
+        '5. Se comunique a la parte interesada cualquier criterio, actuación o canal adicional que permita fortalecer la protección y seguimiento del caso.',
+        '',
+        'OTROSÍ',
+        'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones, verificaciones o complementaciones.'
       ].join('\n');
 
     case 'presentacion_alt':
@@ -385,18 +509,22 @@ export function generateDocumentByType(
         'PRESENTACIÓN A LA ALT',
         '',
         'Dirigido a: Autoridad Binacional Autónoma del Sistema Hídrico TDPS',
-        `Asunto: Puesta en conocimiento y solicitud de atención técnica respecto al caso ${data.title || 'sin título'}`,
+        `Asunto: Puesta en conocimiento y solicitud de consideración técnica respecto al caso ${data.title || 'sin título'}`,
         '',
-        'Por la presente se pone en conocimiento de la ALT una situación con posible relevancia hídrica, lacustre o sistémica:',
+        'Por la presente se pone en conocimiento de la Autoridad Binacional Autónoma del Sistema Hídrico TDPS una situación que, de acuerdo con la información registrada, podría tener relevancia hídrica, lacustre, territorial o sistémica en el ámbito del sistema TDPS y que amerita consideración técnica e institucional según corresponda.',
         '',
         'IDENTIFICACIÓN DEL CASO',
         `- Título del caso: ${data.title || '[pendiente]'}`,
         `- Lugar o área afectada: ${data.location || '[pendiente]'}`,
         `- Comunidad o población involucrada: ${data.community || '[pendiente]'}`,
         `- Personas o grupos afectados: ${data.affectedPeople || '[pendiente]'}`,
+        `- Tipo de problema reportado: ${data.problemType || '[pendiente]'}`,
         '',
         'HECHOS RELEVANTES',
         data.narrative || '[Relato pendiente]',
+        '',
+        'RELEVANCIA DEL CASO PARA LA GESTIÓN DEL AGUA',
+        'Con base en la información disponible, el caso podría involucrar afectaciones o riesgos vinculados al agua, al entorno lacustre, a usos comunitarios del territorio o a dinámicas que requieren mejor articulación de información y seguimiento entre actores competentes.',
         '',
         'GESTIONES PREVIAS',
         previousActions,
@@ -408,9 +536,14 @@ export function generateDocumentByType(
         normativeBlock,
         '',
         'PETITORIO',
-        '1. Se tenga presente la información del caso en el marco de las atribuciones técnicas e institucionales de la ALT.',
-        '2. Se valore la pertinencia de seguimiento técnico, coordinación interinstitucional o atención especializada según corresponda.',
-        '3. Se informe, en su caso, si existen antecedentes, monitoreos, articulaciones o recomendaciones relacionadas con el área afectada.'
+        '1. Se tenga por presentada la presente comunicación y por puesta en conocimiento la situación descrita.',
+        '2. Se valore la pertinencia de revisión técnica, consideración institucional o seguimiento dentro del marco de competencias de la ALT.',
+        '3. Se informe, en su caso, si existen antecedentes, monitoreos, reportes, estudios, acciones previas o mecanismos de articulación relacionados con el área o problemática reportada.',
+        '4. Se considere, cuando corresponda, la orientación técnica o la articulación con las instancias competentes para el tratamiento del caso.',
+        '5. Se comunique, en la medida de lo posible, cualquier información o criterio técnico relevante que contribuya al seguimiento del expediente.',
+        '',
+        'OTROSÍ',
+        'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones, verificaciones o complementaciones.'
       ].join('\n');
 
     case 'memorial_municipio':
@@ -418,17 +551,22 @@ export function generateDocumentByType(
         'MEMORIAL AL MUNICIPIO',
         '',
         `Dirigido a: ${destination}`,
-        `Asunto: Solicitud de actuación municipal respecto al caso ${data.title || 'sin título'}`,
+        `Asunto: Puesta en conocimiento y solicitud de actuación municipal respecto al caso ${data.title || 'sin título'}`,
         '',
-        `Quien suscribe, en representación de ${data.community || 'la comunidad afectada'}, pone en conocimiento de su autoridad la siguiente situación:`,
+        `Quien suscribe, en representación de ${data.community || 'la comunidad afectada'}, pone en conocimiento de su autoridad la siguiente situación que estaría generando afectaciones en el ámbito local y que requiere atención municipal conforme a las competencias que correspondan.`,
+        '',
+        'IDENTIFICACIÓN DEL CASO',
+        `- Título del caso: ${data.title || '[pendiente]'}`,
+        `- Lugar: ${data.location || '[pendiente]'}`,
+        `- Comunidad o población afectada: ${data.community || '[pendiente]'}`,
+        `- Tipo de problema: ${data.problemType || '[pendiente]'}`,
+        `- Personas o grupos afectados: ${data.affectedPeople || '[pendiente]'}`,
         '',
         'HECHOS RELEVANTES',
         data.narrative || '[Relato pendiente]',
         '',
-        'IDENTIFICACIÓN DEL CASO',
-        `- Lugar: ${data.location || '[pendiente]'}`,
-        `- Tipo de problema: ${data.problemType || '[pendiente]'}`,
-        `- Personas o grupos afectados: ${data.affectedPeople || '[pendiente]'}`,
+        'AFECTACIÓN REPORTADA',
+        `De acuerdo con la información registrada, la situación descrita estaría afectando a ${data.affectedPeople || 'la población involucrada'} y amerita revisión municipal por sus posibles implicaciones ambientales, sanitarias, territoriales o de gestión local, según corresponda.`,
         '',
         'GESTIONES PREVIAS',
         previousActions,
@@ -440,10 +578,14 @@ export function generateDocumentByType(
         normativeBlock,
         '',
         'PETITORIO',
-        '1. Se tenga por presentado el presente memorial.',
-        '2. Se identifique la unidad municipal competente.',
-        '3. Se adopten medidas de inspección, seguimiento, respuesta o coordinación institucional, según corresponda.',
-        '4. Se responda formalmente por escrito dentro de plazo razonable.'
+        '1. Se tenga por presentado el presente memorial y por puesta en conocimiento la situación descrita.',
+        '2. Se identifique y active la unidad municipal competente para conocer el caso.',
+        '3. Se disponga, cuando corresponda, inspección, verificación en sitio o revisión técnica/administrativa de los hechos reportados.',
+        '4. Se evalúe la adopción de medidas de atención, mitigación, fiscalización, limpieza, seguimiento o coordinación institucional, según la naturaleza del caso.',
+        '5. Se emita respuesta formal por escrito, señalando actuaciones realizadas, instancia responsable y pasos siguientes.',
+        '',
+        'OTROSÍ',
+        'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones o complementaciones.'
       ].join('\n');
 
     case 'minuta_reunion':
@@ -496,14 +638,26 @@ export function generateDocumentByType(
         'BASE NORMATIVA SELECCIONADA',
         normativeBlock,
         '',
-        'INVENTARIO DE EVIDENCIA',
+        'RESUMEN DE COMPLETITUD DE EVIDENCIA',
+        evidenceCompletenessSummaryText(data),
+        '',
+        'VACÍOS CRÍTICOS IDENTIFICADOS',
+        evidenceCriticalGapsText(data),
+        '',
+        'INVENTARIO POR TIPO DE EVIDENCIA',
+        groupedEvidenceInventoryText(data),
+        '',
+        'DETALLE INDIVIDUAL DE EVIDENCIA',
         evidenceDetailed,
         '',
         'GESTIONES PREVIAS',
         previousActions,
         '',
-        'OBSERVACIONES',
-        'Este paquete resume la evidencia comunitaria registrada para fines de seguimiento, presentación institucional y respaldo documental.'
+        'OBSERVACIONES DE TRAZABILIDAD Y PREPARACIÓN',
+        evidencePresentationReadinessText(data),
+        '',
+        'OBSERVACIÓN FINAL',
+        'Este paquete organiza la evidencia comunitaria registrada para fines de seguimiento, presentación institucional y fortalecimiento del expediente.'
       ].join('\n');
 
     default:
@@ -518,6 +672,95 @@ export function generateDocumentByType(
       ].join('\n');
   }
 }
+
+    const evidenceTypeOrder = [
+      'Documento oficial',
+      'Informe técnico',
+      'Muestra / análisis',
+      'Acta',
+      'Documento comunitario',
+      'Mapa / croquis',
+      'Registro GPS',
+      'Fotografía',
+      'Video',
+      'Audio',
+      'Testimonio',
+      'Otro'
+    ] as const;
+
+    function normalizeEvidenceType(type?: string): string {
+      const t = (type || '').toLowerCase().trim();
+
+      if (!t) return 'Otro';
+      if (t.includes('foto')) return 'Fotografía';
+      if (t.includes('video')) return 'Video';
+      if (t.includes('audio')) return 'Audio';
+      if (t.includes('testimonio')) return 'Testimonio';
+      if (t.includes('documento oficial')) return 'Documento oficial';
+      if (t.includes('documento comunitario')) return 'Documento comunitario';
+      if (t.includes('acta')) return 'Acta';
+      if (t.includes('mapa') || t.includes('croquis')) return 'Mapa / croquis';
+      if (t.includes('gps')) return 'Registro GPS';
+      if (t.includes('informe')) return 'Informe técnico';
+      if (t.includes('muestra') || t.includes('análisis') || t.includes('analisis')) {
+        return 'Muestra / análisis';
+      }
+
+      return 'Otro';
+    }
+
+    function groupedEvidenceInventoryText(data: CaseRecord) {
+      const evidence = data.evidence || [];
+
+      if (evidence.length === 0) {
+        return 'No existe evidencia registrada para clasificar por categorías.';
+      }
+
+      const grouped = new Map<string, typeof evidence>();
+
+      evidence.forEach((e) => {
+        const groupLabel = normalizeEvidenceType(e.type);
+
+        if (!grouped.has(groupLabel)) {
+          grouped.set(groupLabel, []);
+        }
+
+        grouped.get(groupLabel)!.push(e);
+      });
+
+      const orderedGroups = [
+        ...evidenceTypeOrder.filter((label) => grouped.has(label)),
+        ...[...grouped.keys()]
+          .filter((label) => !evidenceTypeOrder.includes(label as (typeof evidenceTypeOrder)[number]))
+          .sort()
+      ];
+
+      return orderedGroups
+        .map((label) => {
+          const items = grouped.get(label) || [];
+
+          return [
+            `${label.toUpperCase()} (${items.length})`,
+            '',
+            items
+              .map((e, i) => {
+                const assessed = assessEvidenceItem(e);
+
+                return [
+                  `${i + 1}. ${e.name || 'Sin nombre de referencia'}`,
+                  `- Estado: ${assessed.status}`,
+                  `- Qué demuestra: ${e.whatItShows || 'Pendiente'}`,
+                  `- Descripción: ${e.description || 'Pendiente'}`,
+                  `- Fecha: ${e.date || 'Pendiente'}`,
+                  `- GPS: ${e.gps || 'Pendiente'}`,
+                  `- Archivo: ${e.fileName || 'No adjunto'}`
+                ].join('\n');
+              })
+              .join('\n\n')
+          ].join('\n');
+        })
+        .join('\n\n');
+    }
 
 export function buildGeneratedDocuments(
   data: CaseRecord,

@@ -20,6 +20,7 @@ export type Evidence = {
   fileName: string;
   fileType: string;
   fileData: string;
+  whatItShows?: string;
 };
 
 export type CaseRecord = {
