@@ -3,6 +3,11 @@ import { gemini } from '$lib/server/gemini';
 import { openai } from '$lib/server/openai';
 import { normativeSeed } from '$lib/data/normativeSeed';
 import type { DocumentUseKey } from '$lib/types/normative';
+import {
+  matchDocumentUseKeyFromName,
+  getDocumentPriorityFunctions,
+  getDocumentSpecificInstruction
+} from '$lib/config/documentRegistry';
 
 type NormativeMatchInput = {
   normativeSourceId: string;
@@ -27,183 +32,36 @@ type SelectedNormForRefine = {
   priorityScore: number;
 };
 
-function mapDocNameToUseKey(docName: string): DocumentUseKey | null {
-  const normalized = (docName || '').toLowerCase();
+const DEFAULT_PRIORITY_FUNCTIONS = [
+  'derecho_ambiental',
+  'derecho_al_agua',
+  'participacion',
+  'control_social'
+] as const;
 
-  if (normalized.includes('ficha')) return 'ficha_resumen';
+const DEFAULT_DOCUMENT_INSTRUCTION = `
+TIPO DOCUMENTAL: GENERAL
 
-  if (normalized.includes('inspección') || normalized.includes('inspeccion')) {
-    return 'solicitud_inspeccion';
-  }
+INSTRUCCIONES ESPECÍFICAS
+- Reescribe el documento para que quede claro, sobrio y usable.
+- Integra la base normativa solo si fue seleccionada para este documento.
+- No inventes hechos, competencias, procedimientos ni autoridades.
+`.trim();
 
-  if (normalized.includes('información') || normalized.includes('informacion')) {
-    return 'solicitud_informacion';
-  }
-
-  if (normalized.includes('seguimiento')) return 'nota_seguimiento';
-  if (normalized.includes('acta')) return 'acta_comunitaria';
-
-  if (normalized.includes('cronología') || normalized.includes('cronologia')) {
-    return 'cronologia';
-  }
-
-  if (normalized.includes('alt')) return 'presentacion_alt';
-
-  if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
-    return 'presentacion_defensoria';
-  }
-
-  if (normalized.includes('memorial') && normalized.includes('municip')) {
-    return 'memorial_municipio';
-  }
-
-  if (normalized.includes('minuta')) {
-    return 'minuta_reunion';
-  }
-
-  if (
-    normalized.includes('paquete de evidencia') ||
-    normalized.includes('paquete evidencia') ||
-    normalized.includes('evidencia')
-  ) {
-    return 'paquete_evidencia';
-  }
-
-  return null;
+function getDocumentUseKey(documentName: string): DocumentUseKey | null {
+  return matchDocumentUseKeyFromName(documentName);
 }
 
-function getPriorityFunctionsForDocument(documentName: string): string[] {
-  const normalized = (documentName || '').toLowerCase();
+function getPriorityFunctionsForDocumentName(documentName: string): string[] {
+  const docUseKey = getDocumentUseKey(documentName);
+  return docUseKey ? getDocumentPriorityFunctions(docUseKey) : [...DEFAULT_PRIORITY_FUNCTIONS];
+}
 
-  if (normalized.includes('ficha')) {
-    return [
-      'derecho_ambiental',
-      'derecho_al_agua',
-      'participacion',
-      'control_social'
-    ];
-  }
-
-  if (
-    normalized.includes('solicitud de información') ||
-    normalized.includes('solicitud de informacion')
-  ) {
-    return [
-      'acceso_informacion',
-      'transparencia_activa',
-      'derecho_peticion',
-      'seguimiento_omision',
-      'control_social'
-    ];
-  }
-
-  if (
-    normalized.includes('solicitud de inspección') ||
-    normalized.includes('solicitud de inspeccion')
-  ) {
-    return [
-      'inspeccion_fiscalizacion',
-      'competencia_municipal',
-      'competencia_ambiental',
-      'gestion_riesgos',
-      'salud_publica',
-      'derecho_ambiental',
-      'derecho_al_agua'
-    ];
-  }
-
-  if (normalized.includes('seguimiento')) {
-    return [
-      'seguimiento_omision',
-      'derecho_peticion',
-      'control_social',
-      'transparencia_activa'
-    ];
-  }
-
-  if (normalized.includes('acta')) {
-    return [
-      'participacion',
-      'control_social',
-      'coordinacion_interinstitucional',
-      'seguimiento_omision'
-    ];
-  }
-
-  if (normalized.includes('cronología') || normalized.includes('cronologia')) {
-    return [
-      'seguimiento_omision',
-      'control_social',
-      'acceso_informacion'
-    ];
-  }
-
-  if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
-    return [
-      'proteccion_defensoras',
-      'seguimiento_omision',
-      'acceso_justicia_ambiental',
-      'derecho_ambiental',
-      'derecho_al_agua',
-      'participacion',
-      'control_social'
-    ];
-  }
-
-  if (normalized.includes('alt')) {
-    return [
-      'competencia_alt',
-      'competencia_binacional',
-      'ruta_binacional',
-      'soporte_tecnico',
-      'coordinacion_interinstitucional',
-      'derecho_al_agua',
-      'fundamento_ecosistemico'
-    ];
-  }
-
-  if (normalized.includes('memorial') && normalized.includes('municip')) {
-    return [
-      'competencia_municipal',
-      'derecho_peticion',
-      'inspeccion_fiscalizacion',
-      'gestion_riesgos',
-      'salud_publica',
-      'derecho_ambiental',
-      'derecho_al_agua'
-    ];
-  }
-
-  if (normalized.includes('minuta')) {
-    return [
-      'participacion',
-      'control_social',
-      'coordinacion_interinstitucional',
-      'seguimiento_omision'
-    ];
-  }
-
-  if (
-    normalized.includes('paquete de evidencia') ||
-    normalized.includes('paquete evidencia') ||
-    normalized.includes('evidencia')
-  ) {
-    return [
-      'control_social',
-      'inspeccion_fiscalizacion',
-      'seguimiento_omision',
-      'derecho_ambiental',
-      'derecho_al_agua',
-      'participacion'
-    ];
-  }
-
-  return [
-    'derecho_ambiental',
-    'derecho_al_agua',
-    'participacion',
-    'control_social'
-  ];
+function getSpecificInstructionForDocumentName(documentName: string): string {
+  const docUseKey = getDocumentUseKey(documentName);
+  return docUseKey
+    ? getDocumentSpecificInstruction(docUseKey)
+    : DEFAULT_DOCUMENT_INSTRUCTION;
 }
 
 function getSelectedNormsForDocument(payload: {
@@ -214,13 +72,11 @@ function getSelectedNormsForDocument(payload: {
     };
   };
 }): SelectedNormForRefine[] {
-  const docUseKey = mapDocNameToUseKey(payload.options.documentName);
+  const docUseKey = getDocumentUseKey(payload.options.documentName);
   if (!docUseKey) return [];
 
   const matches = payload.options.caseData.normativeMatches || [];
-  const priorityFunctions = getPriorityFunctionsForDocument(
-    payload.options.documentName
-  );
+  const priorityFunctions = getDocumentPriorityFunctions(docUseKey);
 
   const enriched = matches
     .filter(
@@ -267,207 +123,6 @@ function getSelectedNormsForDocument(payload: {
     .sort((a, b) => b.priorityScore - a.priorityScore);
 
   return enriched;
-}
-
-function getDocumentSpecificInstruction(documentName: string) {
-  const normalized = (documentName || '').toLowerCase();
-
-  if (normalized.includes('ficha')) {
-    return `
-TIPO DOCUMENTAL: FICHA RESUMEN
-
-FINALIDAD
-Este documento debe sintetizar el caso de forma clara, ordenada y útil para revisión, seguimiento o derivación.
-
-INSTRUCCIONES ESPECÍFICAS
-- Resume hechos, lugar, personas afectadas, actuaciones previas y estado actual.
-- Mantén tono claro, sobrio y organizativo.
-- Ordena el contenido en secciones breves y útiles.
-- No conviertas la ficha en denuncia agresiva ni en ensayo jurídico largo.
-- Usa la base normativa solo para orientar o contextualizar, no para sobrecargar la ficha.
-`.trim();
-  }
-
-  if (
-    normalized.includes('solicitud de información') ||
-    normalized.includes('solicitud de informacion')
-  ) {
-    return `
-TIPO DOCUMENTAL: SOLICITUD DE INFORMACIÓN
-
-FINALIDAD
-Este documento debe pedir información concreta, identificable y útil para abrir, fortalecer o aclarar el expediente.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal, claro y administrativo.
-- Organiza la información requerida en puntos numerados.
-- Prioriza pedidos verificables: informes, inspecciones, monitoreos, licencias, cronogramas, responsables, antecedentes y medidas adoptadas.
-- Da prioridad a normas cuya función sea acceso_informacion, transparencia_activa, derecho_peticion, seguimiento_omision o control_social.
-- Si hay base normativa seleccionada, úsala para reforzar el deber de informar y responder.
-- No exageres ni acuses.
-- No conviertas este documento en una denuncia agresiva.
-`.trim();
-  }
-
-  if (
-    normalized.includes('solicitud de inspección') ||
-    normalized.includes('solicitud de inspeccion')
-  ) {
-    return `
-TIPO DOCUMENTAL: SOLICITUD DE INSPECCIÓN
-
-FINALIDAD
-Este documento debe pedir actuación concreta e inmediata de verificación técnica en sitio.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal, operativo y preciso.
-- Mantén foco en hechos verificables, lugar, afectación observada y evidencia disponible.
-- El petitorio debe incluir inspección en sitio, verificación técnica y, si corresponde, constatación de descargas, rebalses, residuos, afectación hídrica o toma de muestras.
-- Da prioridad a normas cuya función sea inspeccion_fiscalizacion, competencia_municipal, competencia_ambiental, gestion_riesgos o salud_publica.
-- No conviertas el documento en una denuncia penal ni en una carta política.
-`.trim();
-  }
-
-  if (normalized.includes('seguimiento')) {
-    return `
-TIPO DOCUMENTAL: NOTA DE SEGUIMIENTO
-
-FINALIDAD
-Este documento debe dejar constancia de actuaciones previas y pedir respuesta, avance o cumplimiento.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal, sobrio y administrativo.
-- Resume gestiones previas, fechas o antecedentes relevantes.
-- Señala con claridad qué sigue pendiente o qué respuesta se espera.
-- Da prioridad a normas cuya función sea seguimiento_omision, derecho_peticion, transparencia_activa o control_social.
-- No conviertas el documento en reclamo emocional ni en escrito sancionatorio.
-`.trim();
-  }
-
-  if (normalized.includes('acta')) {
-    return `
-TIPO DOCUMENTAL: ACTA COMUNITARIA
-
-FINALIDAD
-Este documento debe registrar acuerdos, hechos, decisiones o mandatos comunitarios de forma clara y usable.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal pero comprensible.
-- Deja claro quiénes participaron, qué se discutió y qué acuerdos se adoptaron.
-- Si corresponde, registra mandato, respaldo o decisiones para acciones posteriores.
-- Da prioridad a normas cuya función sea participacion, control_social o coordinacion_interinstitucional.
-- No conviertas el acta en memorial ni en denuncia.
-`.trim();
-  }
-
-  if (normalized.includes('cronología') || normalized.includes('cronologia')) {
-    return `
-TIPO DOCUMENTAL: CRONOLOGÍA
-
-FINALIDAD
-Este documento debe ordenar temporalmente los hechos, actuaciones y respuestas institucionales del caso.
-
-INSTRUCCIONES ESPECÍFICAS
-- Presenta la información en secuencia temporal clara.
-- Prioriza fechas, actuaciones, omisiones, visitas, respuestas y eventos relevantes.
-- No conviertas la cronología en argumentación extensa.
-- Puede incorporar base normativa solo si ayuda a entender la relevancia de un momento clave.
-`.trim();
-  }
-
-  if (normalized.includes('defensoría') || normalized.includes('defensoria')) {
-    return `
-TIPO DOCUMENTAL: PRESENTACIÓN A LA DEFENSORÍA DEL PUEBLO
-
-FINALIDAD
-Este documento debe comunicar una posible afectación de derechos y/o una omisión institucional, solicitando intervención, seguimiento, exhortación u orientación.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal, sobrio y de tutela de derechos.
-- Enfatiza la afectación de personas, comunidad o colectivos.
-- Resume las gestiones previas y deja claro si hubo falta de respuesta, respuesta insuficiente o persistencia del problema.
-- Da prioridad a normas cuya función sea proteccion_defensoras, seguimiento_omision, acceso_justicia_ambiental, derecho_ambiental, derecho_al_agua o participacion.
-- El petitorio debe pedir intervención, seguimiento, requerimiento de información, exhortación o acompañamiento, según corresponda.
-- No conviertas el texto en demanda judicial.
-`.trim();
-  }
-
-  if (normalized.includes('alt')) {
-    return `
-TIPO DOCUMENTAL: PRESENTACIÓN A LA ALT
-
-FINALIDAD
-Este documento debe poner en conocimiento un caso con relevancia hídrica, lacustre, sistémica o binacional, solicitando atención técnica, seguimiento o articulación institucional.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono técnico-institucional, respetuoso y claro.
-- Enfatiza la dimensión hídrica, lacustre, territorial o sistémica del caso.
-- Explica por qué el caso puede requerir atención, conocimiento técnico o articulación en el marco del sistema TDPS.
-- Da prioridad a normas cuya función sea competencia_alt, competencia_binacional, ruta_binacional, soporte_tecnico o coordinacion_interinstitucional.
-- No conviertas el texto en una denuncia emocional.
-- El petitorio debe pedir consideración técnica, información sobre antecedentes, monitoreo, coordinación o seguimiento institucional, según corresponda.
-`.trim();
-  }
-
-  if (normalized.includes('memorial') && normalized.includes('municip')) {
-    return `
-TIPO DOCUMENTAL: MEMORIAL AL MUNICIPIO
-
-FINALIDAD
-Este documento debe presentar formalmente un problema y solicitar actuación municipal concreta.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta en tono formal, administrativo y claro.
-- Enfatiza hechos verificables, afectación local y competencia municipal.
-- El petitorio debe ser concreto: inspección, informe, intervención, limpieza, fiscalización, mitigación o seguimiento.
-- Da prioridad a normas cuya función sea competencia_municipal, derecho_peticion, inspeccion_fiscalizacion, gestion_riesgos o salud_publica.
-- No conviertas el texto en una denuncia penal ni en manifiesto político.
-`.trim();
-  }
-
-  if (normalized.includes('minuta')) {
-    return `
-TIPO DOCUMENTAL: MINUTA DE REUNIÓN
-
-FINALIDAD
-Este documento debe resumir una reunión de trabajo, acuerdos, tareas y próximos pasos.
-
-INSTRUCCIONES ESPECÍFICAS
-- Redacta de forma clara, breve y ordenada.
-- Identifica participantes, temas tratados, acuerdos y responsables.
-- Si corresponde, deja constancia de compromisos institucionales o comunitarios.
-- No conviertas la minuta en acta jurídica compleja ni en memorial.
-`.trim();
-  }
-
-  if (
-    normalized.includes('paquete de evidencia') ||
-    normalized.includes('paquete evidencia') ||
-    normalized.includes('evidencia')
-  ) {
-    return `
-TIPO DOCUMENTAL: PAQUETE DE EVIDENCIA
-
-FINALIDAD
-Este documento debe organizar evidencia útil para sustentar el caso y facilitar su revisión por una autoridad o instancia acompañante.
-
-INSTRUCCIONES ESPECÍFICAS
-- Ordena la evidencia de forma clara, trazable y verificable.
-- Describe anexos, fotografías, testimonios, fechas, lugares y relación con los hechos.
-- Si corresponde, explica brevemente por qué cada pieza fortalece el caso.
-- No inventes anexos ni afirmes que existe evidencia no proporcionada.
-- No conviertas el paquete en denuncia narrativa extensa.
-`.trim();
-  }
-
-  return `
-TIPO DOCUMENTAL: GENERAL
-
-INSTRUCCIONES ESPECÍFICAS
-- Reescribe el documento para que quede claro, sobrio y usable.
-- Integra la base normativa solo si fue seleccionada para este documento.
-- No inventes hechos, competencias, procedimientos ni autoridades.
-`.trim();
 }
 
 function buildRefinePrompt(payload: {
@@ -519,8 +174,8 @@ function buildRefinePrompt(payload: {
   } = options;
 
   const selectedNorms = getSelectedNormsForDocument(payload);
-  const priorityFunctions = getPriorityFunctionsForDocument(documentName);
-  const docSpecificInstruction = getDocumentSpecificInstruction(documentName);
+  const priorityFunctions = getPriorityFunctionsForDocumentName(documentName);
+  const docSpecificInstruction = getSpecificInstructionForDocumentName(documentName);
 
   const normsText =
     selectedNorms.length > 0

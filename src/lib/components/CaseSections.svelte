@@ -8,13 +8,12 @@
   } = $props();
 
   const sections = [
-    'Narrar',
-    'Hechos',
-    'Evidencia',
-    'Seguimiento',
-    'Ruta de acción',
-    'Marco normativo',
-    'Documentos',
+    '1. Narrar',
+    '2. Hechos',
+    '3. Evidencia',
+    '4. Ruta de acción',
+    '5. Marco normativo',
+    '6. Documentos',
   ];
 </script>
 

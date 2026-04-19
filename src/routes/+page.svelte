@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getDocumentName } from '$lib/config/documentRegistry';
   import { onMount } from 'svelte';
   import { saveCase, deleteCase } from '$lib/db/cases';
   import { getAllCasesWithRelations } from '$lib/db/fullCases';
@@ -88,20 +89,6 @@
     if (normalized === 'baja') return 'baja';
     return 'media';
   }
-
-  const documentNameMap: Record<DocumentUseKey, string> = {
-    ficha_resumen: 'Ficha resumen del caso',
-    solicitud_inspeccion: 'Solicitud de inspección',
-    solicitud_informacion: 'Solicitud de información',
-    nota_seguimiento: 'Nota de seguimiento',
-    acta_comunitaria: 'Acta breve comunitaria',
-    cronologia: 'Cronología del caso',
-    presentacion_alt: 'Presentación a la ALT',
-    presentacion_defensoria: 'Presentación a la Defensoría del Pueblo',
-    memorial_municipio: 'Memorial al municipio',
-    minuta_reunion: 'Minuta de reunión',
-    paquete_evidencia: 'Paquete de evidencia'
-  };
 
   let status = $state('Inicializando...');
   let debug = $state('');
@@ -898,7 +885,7 @@
 
   let normativeSuggestedDocuments = $derived(
     documentsActivatedByNorms.map((key) => ({
-      name: documentNameMap[key] || key,
+      name: getDocumentName(key),
       why: 'Activado por normas seleccionadas en el marco normativo.'
     }))
   );
