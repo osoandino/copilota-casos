@@ -36,7 +36,8 @@
   import {
     backupCaseToCloud,
     restoreCaseFromCloud,
-    listCloudBackups
+    listCloudBackups,
+    deleteCaseFromCloud
   } from '$lib/cloud/caseBackup';
 
   function uid() {
@@ -116,6 +117,52 @@
   let cloudBackups = $state<any[]>([]);
   let cloudLoading = $state(false);
   let cloudError = $state('');
+
+  // ── PIN de acceso ─────────────────────────────────────────────────────────
+  const PIN_KEY = 'copilota_pin_hash';
+
+  async function hashPin(pin: string): Promise<string> {
+    const data = new TextEncoder().encode(pin + ':copilota-tdps-salt');
+    const buf  = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Guarda protegido — localStorage solo existe en el navegador, no en SSR
+  function storedHash(): string {
+    if (typeof localStorage === 'undefined') return '';
+    return localStorage.getItem(PIN_KEY) ?? '';
+  }
+  function pinIsSet(): boolean { return storedHash() !== ''; }
+
+  // Empieza desbloqueado en SSR; onMount aplica el estado real en el cliente
+  let pinUnlocked = $state(true);
+  let pinMode     = $state<'unlock' | 'setup'>('setup');
+  let pinInput    = $state('');
+  let pinConfirm  = $state('');
+  let pinError    = $state('');
+  let pinLoading  = $state(false);
+
+  async function handlePinSubmit() {
+    pinError = '';
+    if (pinInput.length < 4) { pinError = 'El PIN debe tener al menos 4 dígitos.'; return; }
+    pinLoading = true;
+    if (pinMode === 'setup') {
+      if (pinInput !== pinConfirm) { pinError = 'Los PINs no coinciden.'; pinLoading = false; return; }
+      const hash = await hashPin(pinInput);
+      localStorage.setItem(PIN_KEY, hash);
+      pinUnlocked = true;
+    } else {
+      const hash = await hashPin(pinInput);
+      if (hash === storedHash()) {
+        pinUnlocked = true;
+      } else {
+        pinError = 'PIN incorrecto. Intenta de nuevo.';
+      }
+    }
+    pinInput = ''; pinConfirm = ''; pinLoading = false;
+  }
+
+  function lockApp() { pinUnlocked = false; pinInput = ''; pinConfirm = ''; pinError = ''; }
 
   async function loadCases() {
     try {
@@ -311,6 +358,26 @@
       console.error(error);
       status = 'Error al recuperar desde nube';
       debug = errorToMessage(error);
+    }
+  }
+
+  async function deleteCloudCase(caseId: string, caseTitle: string) {
+    const confirmed = confirm(
+      `¿Eliminar de la nube el caso "${caseTitle || 'sin título'}"?\n\nEsta acción no elimina el caso de este dispositivo, solo de la nube.`
+    );
+    if (!confirmed) return;
+    try {
+      cloudLoading = true;
+      cloudError = '';
+      await deleteCaseFromCloud(caseId);
+      cloudBackups = cloudBackups.filter((b) => b.id !== caseId);
+      status = 'Caso eliminado de la nube';
+      debug = caseId;
+    } catch (error) {
+      console.error(error);
+      cloudError = errorToMessage(error);
+    } finally {
+      cloudLoading = false;
     }
   }
 
@@ -953,6 +1020,15 @@
   );
 
   onMount(async () => {
+    // Inicializa el estado del PIN ahora que estamos en el cliente (localStorage disponible)
+    if (pinIsSet()) {
+      pinUnlocked = false;
+      pinMode     = 'unlock';
+    } else {
+      pinUnlocked = false;   // muestra la pantalla de setup la primera vez
+      pinMode     = 'setup';
+    }
+
     await loadCases();
   });
 </script>
@@ -962,6 +1038,147 @@
 </svelte:head>
 
 <div style="padding: 2rem; font-family: sans-serif;">
+
+  <!-- ── Pantalla de PIN ─────────────────────────────────────────────────── -->
+  {#if !pinUnlocked}
+    <div style="
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0D3F5F 0%, #1B5C8C 100%);
+      z-index: 9999;
+      padding: 1.5rem;
+    ">
+      <div style="
+        background: white;
+        border-radius: 24px;
+        padding: 2rem 2rem 1.8rem;
+        width: 100%;
+        max-width: 360px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+        text-align: center;
+      ">
+        <!-- Logo / título -->
+        <div style="font-size: 2.2rem; margin-bottom: 0.3rem;">🔐</div>
+        <div style="font-size: 1.3rem; font-weight: 800; color: #14202b; margin-bottom: 0.25rem;">
+          Copilota de Casos
+        </div>
+        <div style="font-size: 0.9rem; color: #607386; margin-bottom: 1.6rem;">
+          {#if pinMode === 'setup'}
+            Crea un PIN de acceso para proteger tus casos
+          {:else}
+            Ingresa tu PIN para continuar
+          {/if}
+        </div>
+
+        <!-- Campo PIN -->
+        <div style="margin-bottom: 0.85rem;">
+          <input
+            type="password"
+            inputmode="numeric"
+            maxlength="8"
+            placeholder={pinMode === 'setup' ? 'Elige un PIN (4–8 dígitos)' : 'Tu PIN'}
+            bind:value={pinInput}
+            onkeydown={(e) => e.key === 'Enter' && !pinLoading && handlePinSubmit()}
+            style="
+              width: 100%;
+              padding: 0.85rem 1rem;
+              border: 2px solid {pinError ? '#e57373' : '#cfd8e3'};
+              border-radius: 14px;
+              font-size: 1.1rem;
+              letter-spacing: 0.25em;
+              text-align: center;
+              outline: none;
+              font-family: monospace;
+              box-sizing: border-box;
+              transition: border-color 0.15s;
+            "
+          />
+        </div>
+
+        <!-- Confirmar PIN (solo en setup) -->
+        {#if pinMode === 'setup'}
+          <div style="margin-bottom: 0.85rem;">
+            <input
+              type="password"
+              inputmode="numeric"
+              maxlength="8"
+              placeholder="Confirma tu PIN"
+              bind:value={pinConfirm}
+              onkeydown={(e) => e.key === 'Enter' && !pinLoading && handlePinSubmit()}
+              style="
+                width: 100%;
+                padding: 0.85rem 1rem;
+                border: 2px solid {pinError ? '#e57373' : '#cfd8e3'};
+                border-radius: 14px;
+                font-size: 1.1rem;
+                letter-spacing: 0.25em;
+                text-align: center;
+                outline: none;
+                font-family: monospace;
+                box-sizing: border-box;
+              "
+            />
+          </div>
+        {/if}
+
+        <!-- Error -->
+        {#if pinError}
+          <div style="
+            color: #b42318;
+            font-size: 0.88rem;
+            margin-bottom: 0.8rem;
+            padding: 0.5rem 0.75rem;
+            background: #fff5f5;
+            border-radius: 10px;
+            border: 1px solid #f3b3b3;
+          ">
+            {pinError}
+          </div>
+        {/if}
+
+        <!-- Botón -->
+        <button
+          onclick={handlePinSubmit}
+          disabled={pinLoading}
+          style="
+            width: 100%;
+            padding: 0.85rem;
+            background: #1B5C8C;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            opacity: {pinLoading ? '0.7' : '1'};
+          "
+        >
+          {#if pinLoading}
+            Verificando…
+          {:else if pinMode === 'setup'}
+            Crear PIN y entrar
+          {:else}
+            Entrar
+          {/if}
+        </button>
+
+        <!-- Nota de ayuda -->
+        <div style="font-size: 0.78rem; color: #9aafc2; margin-top: 1rem; line-height: 1.5;">
+          {#if pinMode === 'setup'}
+            Este PIN protege el acceso en este dispositivo.<br>
+            Guárdalo en un lugar seguro — no se puede recuperar.
+          {:else}
+            Si olvidaste tu PIN, contacta a la administradora.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {:else}
   <section
     style="
       margin-bottom: 2rem;
@@ -1118,11 +1335,27 @@
     </button>
 
     <button onclick={backupCurrentCase} disabled={!currentCase}>
-      Respaldar en nube
+      Guardar en nube
     </button>
 
     <button onclick={loadCloudBackups} disabled={cloudLoading}>
-      {cloudLoading ? 'Cargando respaldos...' : 'Ver respaldos en nube'}
+      {cloudLoading ? 'Cargando casos...' : 'Ver casos en nube'}
+    </button>
+
+    <button
+      onclick={lockApp}
+      style="
+        margin-left: auto;
+        background: #f5f5f5;
+        border: 1px solid #d0d8e0;
+        border-radius: 10px;
+        padding: 0.5rem 0.9rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-family: inherit;
+      "
+    >
+      🔒 Bloquear
     </button>
   </div>
 
@@ -1140,7 +1373,7 @@
         background: #f8fbff;
       "
     >
-      <h3 style="margin-top: 0;">Respaldos en nube</h3>
+      <h3 style="margin-top: 0;">Casos guardados en la nube</h3>
 
       <div style="display: grid; gap: 0.75rem;">
         {#each cloudBackups as backup}
@@ -1154,6 +1387,7 @@
               border: 1px solid #d9e2ec;
               border-radius: 12px;
               background: white;
+              flex-wrap: wrap;
             "
           >
             <div>
@@ -1168,12 +1402,132 @@
               </div>
             </div>
 
-            <button onclick={() => restoreSelectedCloudCase(backup.id)}>
-              Recuperar este caso
-            </button>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button onclick={() => restoreSelectedCloudCase(backup.id)}>
+                Recuperar este caso
+              </button>
+              <button
+                onclick={() => deleteCloudCase(backup.id, backup.title)}
+                style="
+                  background: #fff5f5;
+                  color: #b42318;
+                  border: 1px solid #f3b3b3;
+                  border-radius: 10px;
+                  padding: 0.5rem 0.85rem;
+                  font-weight: 700;
+                  font-size: 0.92rem;
+                  cursor: pointer;
+                "
+              >
+                Eliminar de la nube
+              </button>
+            </div>
           </div>
         {/each}
       </div>
+    </div>
+  {/if}
+
+  <!-- ── Pantalla de bienvenida (solo cuando no hay casos) ── -->
+  {#if cases.length === 0}
+    <div
+      style="
+        margin-bottom: 2rem;
+        padding: 1.8rem 2rem;
+        border: 1px solid #c4d9ee;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #0D3F5F 0%, #1B5C8C 100%);
+        color: white;
+      "
+    >
+      <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem;">
+        Bienvenida, Copilota 👋
+      </div>
+      <div style="font-size: 1rem; opacity: 0.88; line-height: 1.6; margin-bottom: 1.4rem; max-width: 560px;">
+        Esta herramienta te ayuda a documentar casos de daño ambiental en el
+        sistema TDPS y a encontrar la mejor forma de defenderte. Puedes registrar
+        el problema, agregar pruebas, identificar las leyes que te protegen y
+        generar cartas o solicitudes listas para presentar.
+      </div>
+
+      <!-- Pasos rápidos -->
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap: 0.75rem;
+          margin-bottom: 1.6rem;
+        "
+      >
+        {#each [
+          { n: '1', icon: '📝', txt: 'Cuenta qué ocurrió' },
+          { n: '2', icon: '📋', txt: 'Registra los hechos' },
+          { n: '3', icon: '📷', txt: 'Agrega pruebas' },
+          { n: '4', icon: '🧭', txt: 'Descubre qué hacer' },
+          { n: '5', icon: '⚖️', txt: 'Ve las leyes que te protegen' },
+          { n: '6', icon: '📄', txt: 'Genera tu carta' },
+        ] as step}
+          <div
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 0.6rem;
+              background: rgba(255,255,255,0.10);
+              border: 1px solid rgba(255,255,255,0.20);
+              border-radius: 12px;
+              padding: 0.65rem 0.8rem;
+            "
+          >
+            <span style="font-size: 1.1rem; flex-shrink: 0;">{step.icon}</span>
+            <div>
+              <div style="font-size: 0.72rem; opacity: 0.65; font-weight: 600; margin-bottom: 1px;">
+                Paso {step.n}
+              </div>
+              <div style="font-size: 0.88rem; font-weight: 600; line-height: 1.3;">
+                {step.txt}
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <!-- Tip -->
+      <div
+        style="
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.22);
+          border-radius: 12px;
+          padding: 0.7rem 1rem;
+          font-size: 0.9rem;
+          line-height: 1.55;
+          margin-bottom: 1.5rem;
+          max-width: 560px;
+        "
+      >
+        💡 <strong>Consejo:</strong> Puedes avanzar y volver entre los pasos en cualquier momento.
+        Los cambios se guardan automáticamente.
+      </div>
+
+      <!-- Botón principal -->
+      <button
+        onclick={createTestCase}
+        style="
+          background: white;
+          color: #1B5C8C;
+          border: none;
+          border-radius: 14px;
+          padding: 0.85rem 2rem;
+          font-size: 1.05rem;
+          font-weight: 800;
+          cursor: pointer;
+          font-family: inherit;
+          transition: opacity 0.15s;
+        "
+        onmouseenter={(e) => (e.currentTarget as HTMLButtonElement).style.opacity = '0.88'}
+        onmouseleave={(e) => (e.currentTarget as HTMLButtonElement).style.opacity = '1'}
+      >
+        Crear mi primer caso →
+      </button>
     </div>
   {/if}
 
@@ -1242,4 +1596,6 @@
       />
     </div>
   </div>
+
+  {/if}
 </div>

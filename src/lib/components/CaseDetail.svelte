@@ -217,6 +217,113 @@
 
   let currentSection = $state('Narrar');
 
+  // ── Selector visual de tipo de problema ──────────────────────────────────
+
+  // Cada chip guarda las señales exactas que usa el motor operacional para
+  // detectar el patrón. Así el motor sigue funcionando sin ningún cambio.
+  const PROBLEM_CHIPS = [
+    {
+      id:      'TOP-01-PTAR',
+      icon:    '💧',
+      label:   'Aguas sucias en río, lago o canal',
+      signals: ['aguas residuales', 'descarga', 'canal', 'rebalse', 'espuma', 'ptar', 'alcantarillado']
+    },
+    {
+      id:      'TOP-02-RESIDUOS',
+      icon:    '🗑️',
+      label:   'Basura o quema cerca del agua',
+      signals: ['basura', 'botadero', 'quema', 'microbasural', 'lixiviados', 'plásticos en ribera']
+    },
+    {
+      id:      'TOP-03-COHANA',
+      icon:    '🐟',
+      label:   'Agua verde, algas o animales muertos',
+      signals: ['agua verde', 'algas', 'mortandad de peces', 'eutrofización', 'agua no usable']
+    },
+    {
+      id:      'TOP-04-INUNDACION',
+      icon:    '🌊',
+      label:   'Inundación o desborde con daños',
+      signals: ['inundación', 'desborde', 'riada', 'pérdida de cultivos', 'animales enfermos']
+    },
+    {
+      id:      'TOP-05-DERRAME',
+      icon:    '🛢️',
+      label:   'Derrame de combustible u aceite',
+      signals: ['derrame', 'combustible', 'aceite', 'mancha iridiscente', 'hidrocarburo']
+    },
+    {
+      id:      'TOP-11-CONSULTA',
+      icon:    '🏗️',
+      label:   'Obra o proyecto sin consultar a la comunidad',
+      signals: ['consulta', 'ya decidieron', 'socialización tardía', 'afectación a territorio', 'proyecto']
+    },
+    {
+      id:      'TOP-12-DEFENSORAS',
+      icon:    '🛡️',
+      label:   'Me amenazaron por defender',
+      signals: ['amenaza', 'hostigamiento', 'represalia', 'difamación', 'vigilancia']
+    }
+  ] as const;
+
+  // Intenta reconocer chips a partir de un problemType ya guardado (texto libre
+  // o de una selección anterior). Basta con que aparezca 1 señal del chip.
+  function detectChipsFromText(pt: string): string[] {
+    if (!pt) return [];
+    const norm = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    const text = norm(pt);
+    return PROBLEM_CHIPS
+      .filter((chip) => chip.signals.some((sig) => text.includes(norm(sig))))
+      .map((chip) => chip.id);
+  }
+
+  // Construye el string que se guarda en caseData.problemType.
+  // Incluye el label visible + las señales clave del motor.
+  function buildProblemTypeValue(ids: string[], otro: string): string {
+    const parts = ids.map((id) => {
+      const chip = PROBLEM_CHIPS.find((c) => c.id === id);
+      if (!chip) return '';
+      return `${chip.label} (${chip.signals.slice(0, 3).join(', ')})`;
+    });
+    if (otro.trim()) parts.push(otro.trim());
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  // Estado local de los chips — se sincroniza cuando cambia el caso activo
+  let selectedChipIds = $state<string[]>([]);
+  let otroText        = $state<string>('');
+  let _lastCaseId     = $state('');
+
+  $effect(() => {
+    const currentId = caseData?.id ?? '';
+    if (currentId !== _lastCaseId) {
+      _lastCaseId      = currentId;
+      selectedChipIds  = detectChipsFromText(caseData?.problemType ?? '');
+      otroText         = '';
+    }
+  });
+
+  const showOtro = $derived(selectedChipIds.includes('__OTRO__'));
+
+  function toggleChip(id: string) {
+    if (id === '__OTRO__') {
+      selectedChipIds = selectedChipIds.includes('__OTRO__')
+        ? selectedChipIds.filter((x) => x !== '__OTRO__')
+        : [...selectedChipIds, '__OTRO__'];
+    } else {
+      selectedChipIds = selectedChipIds.includes(id)
+        ? selectedChipIds.filter((x) => x !== id)
+        : [...selectedChipIds, id];
+    }
+    onUpdate('problemType', buildProblemTypeValue(selectedChipIds.filter((x) => x !== '__OTRO__'), otroText));
+  }
+
+  function handleOtroInput(value: string) {
+    otroText = value;
+    onUpdate('problemType', buildProblemTypeValue(selectedChipIds.filter((x) => x !== '__OTRO__'), value));
+  }
+
   // Detecta automáticamente qué secciones ya tienen contenido suficiente
   const completedSections = $derived(
     (() => {
@@ -372,14 +479,102 @@
             />
           </label>
 
-          <label>
-            <div style="margin-bottom: 0.35rem; font-weight: 600;">Tipo de problema</div>
-            <input
-              value={caseData.problemType || ''}
-              oninput={(e) => onUpdate('problemType', (e.currentTarget as HTMLInputElement).value)}
-              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
-            />
-          </label>
+          <!-- ── Selector visual de tipo de problema ── -->
+          <div style="grid-column: 1 / -1;">
+            <div style="margin-bottom: 0.55rem; font-weight: 600;">
+              ¿Qué pasó? <span style="font-weight: 400; color: #6b7c8d; font-size: 0.9rem;">(puedes elegir más de uno)</span>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem;">
+              {#each PROBLEM_CHIPS as chip}
+                <button
+                  type="button"
+                  onclick={() => toggleChip(chip.id)}
+                  style={`
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    padding: 0.5rem 0.9rem;
+                    border-radius: 999px;
+                    border: 2px solid ${selectedChipIds.includes(chip.id) ? '#1B5C8C' : '#cfd8e3'};
+                    background: ${selectedChipIds.includes(chip.id) ? '#e3f0fa' : 'white'};
+                    color: ${selectedChipIds.includes(chip.id) ? '#1B5C8C' : '#4a5f72'};
+                    font-weight: ${selectedChipIds.includes(chip.id) ? '700' : '500'};
+                    font-size: 0.88rem;
+                    cursor: pointer;
+                    transition: background 0.15s, border-color 0.15s, color 0.15s;
+                    font-family: inherit;
+                  `}
+                  aria-pressed={selectedChipIds.includes(chip.id)}
+                >
+                  <span style="font-size: 1rem;">{chip.icon}</span>
+                  {chip.label}
+                </button>
+              {/each}
+
+              <!-- Chip: Otro -->
+              <button
+                type="button"
+                onclick={() => toggleChip('__OTRO__')}
+                style={`
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 0.4rem;
+                  padding: 0.5rem 0.9rem;
+                  border-radius: 999px;
+                  border: 2px solid ${showOtro ? '#1B5C8C' : '#cfd8e3'};
+                  background: ${showOtro ? '#e3f0fa' : 'white'};
+                  color: ${showOtro ? '#1B5C8C' : '#4a5f72'};
+                  font-weight: ${showOtro ? '700' : '500'};
+                  font-size: 0.88rem;
+                  cursor: pointer;
+                  transition: background 0.15s, border-color 0.15s, color 0.15s;
+                  font-family: inherit;
+                `}
+                aria-pressed={showOtro}
+              >
+                <span style="font-size: 1rem;">➕</span>
+                Otro problema
+              </button>
+            </div>
+
+            <!-- Campo libre cuando se selecciona "Otro" -->
+            {#if showOtro}
+              <div style="margin-top: 0.4rem;">
+                <input
+                  value={otroText}
+                  oninput={(e) => handleOtroInput((e.currentTarget as HTMLInputElement).value)}
+                  placeholder="Describe el problema con tus propias palabras…"
+                  style="
+                    width: 100%;
+                    padding: 0.7rem;
+                    border: 1px solid #cfd8e3;
+                    border-radius: 12px;
+                    font-size: 0.95rem;
+                    font-family: inherit;
+                    box-sizing: border-box;
+                  "
+                />
+              </div>
+            {/if}
+
+            <!-- Resumen de lo seleccionado -->
+            {#if selectedChipIds.length > 0 || otroText.trim()}
+              <div style="
+                margin-top: 0.55rem;
+                padding: 0.55rem 0.8rem;
+                background: #f0f6fb;
+                border: 1px solid #c4d9ee;
+                border-radius: 10px;
+                font-size: 0.85rem;
+                color: #2c5f8a;
+                line-height: 1.5;
+              ">
+                <strong>Guardado como:</strong>
+                {buildProblemTypeValue(selectedChipIds.filter((x) => x !== '__OTRO__'), otroText)}
+              </div>
+            {/if}
+          </div>
 
           <label>
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Personas afectadas</div>
@@ -390,14 +585,34 @@
             />
           </label>
 
-          <label>
+          <div>
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Estado del caso</div>
-            <input
+            <select
               value={caseData.status || ''}
-              oninput={(e) => onUpdate('status', (e.currentTarget as HTMLInputElement).value)}
-              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
-            />
-          </label>
+              onchange={(e) => onUpdate('status', (e.currentTarget as HTMLSelectElement).value)}
+              style="
+                width: 100%;
+                padding: 0.7rem;
+                border: 1px solid #cfd8e3;
+                border-radius: 12px;
+                background: white;
+                font-family: inherit;
+                font-size: 1rem;
+                color: #2c3e50;
+                appearance: auto;
+              "
+            >
+              <option value="">— Seleccionar estado —</option>
+              <option value="🔴 Recién comenzado">🔴 Recién comenzado</option>
+              <option value="🟡 En proceso">🟡 En proceso</option>
+              <option value="📤 Presentado a autoridad">📤 Presentado a autoridad</option>
+              <option value="⏳ Esperando respuesta">⏳ Esperando respuesta</option>
+              <option value="🔄 Con seguimiento activo">🔄 Con seguimiento activo</option>
+              <option value="✅ Resuelto">✅ Resuelto</option>
+              <option value="⏸️ Pausado">⏸️ Pausado</option>
+              <option value="❌ Archivado">❌ Archivado</option>
+            </select>
+          </div>
         </div>
       </section>
     {/if}

@@ -43,3 +43,12 @@ export async function listCloudBackups() {
   if (error) throw error;
   return data || [];
 }
+
+export async function deleteCaseFromCloud(caseId: string) {
+  const { error } = await supabase
+    .from('cases')
+    .delete()
+    .eq('id', caseId);
+
+  if (error) throw error;
+}

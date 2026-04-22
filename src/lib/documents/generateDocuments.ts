@@ -303,6 +303,42 @@ export function caseSummaryText(
   ].join('\n');
 }
 
+// Genera un bloque de texto con los datos de cada fotografía adjunta al caso.
+// Se agrega al pie de todos los documentos cuando hay imágenes registradas.
+function photoAnnexText(data: CaseRecord): string {
+  const photos = (data.evidence || []).filter(
+    (e) => e.fileData && e.fileData.startsWith('data:image/')
+  );
+  if (photos.length === 0) return '';
+
+  const lines: string[] = [
+    '',
+    '─────────────────────────────────────────────',
+    'ANEXO FOTOGRÁFICO',
+    `Total de fotografías adjuntas al expediente: ${photos.length}`,
+    ''
+  ];
+
+  photos.forEach((e, i) => {
+    lines.push(`Fotografía ${i + 1}: ${e.name || e.description || 'Sin nombre de referencia'}`);
+    if (e.type)        lines.push(`  Tipo: ${e.type}`);
+    if (e.date)        lines.push(`  Fecha: ${e.date}`);
+    if (e.gps)         lines.push(`  Coordenadas GPS: ${e.gps}`);
+    if (e.description) lines.push(`  Descripción: ${e.description}`);
+    if (e.whatItShows) lines.push(`  Qué demuestra: ${e.whatItShows}`);
+    if (e.fileName)    lines.push(`  Archivo: ${e.fileName}`);
+    lines.push('');
+  });
+
+  lines.push(
+    'Nota: Las fotografías originales se encuentran adjuntas al expediente digital',
+    'en la sección "Pruebas" de la Copilota de Casos.',
+    '─────────────────────────────────────────────'
+  );
+
+  return lines.join('\n');
+}
+
 export function generateDocumentByType(
   docName: string,
   data: CaseRecord,
@@ -319,12 +355,16 @@ export function generateDocumentByType(
   const normativeBlock = normativeSupportText(data, docKey, normativeSources);
   const previousActions = previousActionsText(data);
 
+  // El contenido base se genera en el switch; el anexo se agrega al final.
+  let result: string;
+
   switch (docKey) {
     case 'ficha_resumen':
-      return caseSummaryText(data, normativeSources);
+      result = caseSummaryText(data, normativeSources);
+      break;
 
     case 'solicitud_informacion':
-      return [
+      result = [
         'SOLICITUD DE INFORMACIÓN',
         '',
         `Dirigido a: ${destination}`,
@@ -355,9 +395,10 @@ export function generateDocumentByType(
         '',
         'Se solicita respuesta escrita, clara y completa, con remisión de la documentación pertinente si existiera.'
       ].join('\n');
+      break;
 
     case 'solicitud_inspeccion':
-      return [
+      result = [
         'SOLICITUD DE INSPECCIÓN',
         '',
         `Dirigido a: ${destination}`,
@@ -387,9 +428,10 @@ export function generateDocumentByType(
         '',
         'Se solicita respuesta formal dentro de plazo razonable y registro de las actuaciones realizadas.'
       ].join('\n');
+      break;
 
     case 'nota_seguimiento':
-      return [
+      result = [
         'NOTA DE SEGUIMIENTO',
         '',
         `Dirigido a: ${data.authorityContacted || destination}`,
@@ -408,9 +450,10 @@ export function generateDocumentByType(
         '',
         'Se solicita actualización escrita sobre las acciones adoptadas, resultados obtenidos y próximos pasos institucionales.'
       ].join('\n');
+      break;
 
     case 'acta_comunitaria':
-      return [
+      result = [
         'ACTA BREVE COMUNITARIA',
         '',
         `Comunidad: ${data.community || '[pendiente]'}`,
@@ -430,6 +473,7 @@ export function generateDocumentByType(
         '2. validar el relato del caso;',
         '3. definir presentación ante la institución sugerida.'
       ].join('\n');
+      break;
 
     case 'cronologia': {
       const events = (data.events || [])
@@ -449,7 +493,7 @@ export function generateDocumentByType(
               .join('\n')
           : 'Sin eventos registrados.';
 
-      return [
+      result = [
         'CRONOLOGÍA DEL CASO',
         '',
         `Caso: ${data.title || 'Sin título'}`,
@@ -463,7 +507,7 @@ export function generateDocumentByType(
     }
 
     case 'presentacion_defensoria':
-      return [
+      result = [
         'PRESENTACIÓN A LA DEFENSORÍA DEL PUEBLO',
         '',
         'Dirigido a: Defensoría del Pueblo',
@@ -503,9 +547,10 @@ export function generateDocumentByType(
         'OTROSÍ',
         'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones, verificaciones o complementaciones.'
       ].join('\n');
+      break;
 
     case 'presentacion_alt':
-      return [
+      result = [
         'PRESENTACIÓN A LA ALT',
         '',
         'Dirigido a: Autoridad Binacional Autónoma del Sistema Hídrico TDPS',
@@ -545,9 +590,10 @@ export function generateDocumentByType(
         'OTROSÍ',
         'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones, verificaciones o complementaciones.'
       ].join('\n');
+      break;
 
     case 'memorial_municipio':
-      return [
+      result = [
         'MEMORIAL AL MUNICIPIO',
         '',
         `Dirigido a: ${destination}`,
@@ -587,9 +633,10 @@ export function generateDocumentByType(
         'OTROSÍ',
         'Se adjunta la evidencia comunitaria disponible como respaldo preliminar del caso, sin perjuicio de posteriores ampliaciones o complementaciones.'
       ].join('\n');
+      break;
 
     case 'minuta_reunion':
-      return [
+      result = [
         'MINUTA DE REUNIÓN',
         '',
         `Fecha: ${currentDateText()}`,
@@ -615,9 +662,10 @@ export function generateDocumentByType(
         '3. Definir siguientes gestiones y responsables.',
         '4. Registrar fecha tentativa de seguimiento.'
       ].join('\n');
+      break;
 
     case 'paquete_evidencia':
-      return [
+      result = [
         'PAQUETE DE EVIDENCIA',
         '',
         `Caso: ${data.title || '[pendiente]'}`,
@@ -659,9 +707,10 @@ export function generateDocumentByType(
         'OBSERVACIÓN FINAL',
         'Este paquete organiza la evidencia comunitaria registrada para fines de seguimiento, presentación institucional y fortalecimiento del expediente.'
       ].join('\n');
+      break;
 
     default:
-      return [
+      result = [
         'DOCUMENTO BASE',
         '',
         `Caso: ${data.title || 'Sin título'}`,
@@ -670,7 +719,12 @@ export function generateDocumentByType(
         'Base normativa seleccionada:',
         normativeBlock
       ].join('\n');
+      break;
   }
+
+  // Agrega el anexo fotográfico al pie si hay imágenes registradas
+  const annex = photoAnnexText(data);
+  return annex ? result + annex : result;
 }
 
     const evidenceTypeOrder = [

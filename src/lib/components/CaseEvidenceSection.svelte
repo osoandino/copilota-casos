@@ -477,35 +477,137 @@
             Explica qué prueba, confirma o refuerza esta pieza dentro del caso.
           </div>
 
-          <div style="margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
-            <input
-              type="file"
-              onchange={(e) => {
-                const input = e.currentTarget as HTMLInputElement;
-                const file = input.files?.[0];
-                if (file) onUploadEvidenceFile(evidence.id, file);
-              }}
-            />
+          <!-- ── Adjuntar archivo / tomar foto ── -->
+          <div style="margin-top: 0.9rem; display: grid; gap: 0.7rem;">
 
-            {#if evidence.fileName}
-              <span style="color: #5a6b7b; font-size: 0.95rem;">
-                Archivo: {evidence.fileName}
-              </span>
+            <!-- Previsualización de imagen (si el archivo adjunto es una imagen) -->
+            {#if evidence.fileData && evidence.fileData.startsWith('data:image/')}
+              <div style="
+                border: 1px solid #dbe6ef;
+                border-radius: 14px;
+                overflow: hidden;
+                background: #f4f8fc;
+                text-align: center;
+                padding: 0.5rem;
+              ">
+                <img
+                  src={evidence.fileData}
+                  alt={evidence.fileName || 'Imagen adjunta'}
+                  style="
+                    max-width: 100%;
+                    max-height: 320px;
+                    border-radius: 10px;
+                    display: block;
+                    margin: 0 auto;
+                    object-fit: contain;
+                  "
+                />
+                {#if evidence.fileName}
+                  <div style="font-size: 0.82rem; color: #6a7b8c; margin-top: 0.4rem;">
+                    {evidence.fileName}
+                  </div>
+                {/if}
+              </div>
+
+            <!-- Icono de archivo no-imagen adjunto -->
+            {:else if evidence.fileName}
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                padding: 0.65rem 0.9rem;
+                border: 1px solid #dbe6ef;
+                border-radius: 12px;
+                background: #f8fbff;
+                font-size: 0.92rem;
+                color: #4a5f72;
+              ">
+                <span style="font-size: 1.2rem;">📎</span>
+                <span>{evidence.fileName}</span>
+              </div>
             {/if}
 
-            <button
-              onclick={() => onDeleteEvidence(evidence.id)}
-              style="
-                padding: 0.55rem 0.8rem;
-                border: 1px solid #e2b8b8;
-                background: white;
-                color: #9a2f2f;
+            <!-- Botones de carga -->
+            <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+
+              <!-- Tomar foto con la cámara del dispositivo -->
+              <label style="
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.55rem 1rem;
+                border: 1px solid #1B5C8C;
                 border-radius: 10px;
+                background: #eef4fb;
+                color: #1B5C8C;
+                font-size: 0.9rem;
+                font-weight: 600;
                 cursor: pointer;
-              "
-            >
-              Eliminar evidencia
-            </button>
+                font-family: inherit;
+              ">
+                <span style="font-size: 1rem;">📷</span>
+                Tomar foto
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style="display: none;"
+                  onchange={(e) => {
+                    const input = e.currentTarget as HTMLInputElement;
+                    const file = input.files?.[0];
+                    if (file) onUploadEvidenceFile(evidence.id, file);
+                    input.value = '';
+                  }}
+                />
+              </label>
+
+              <!-- Cargar desde galería o archivos -->
+              <label style="
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.55rem 1rem;
+                border: 1px solid #cfd8e3;
+                border-radius: 10px;
+                background: white;
+                color: #4a5f72;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: inherit;
+              ">
+                <span style="font-size: 1rem;">📁</span>
+                {evidence.fileName ? 'Cambiar archivo' : 'Cargar archivo'}
+                <input
+                  type="file"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                  style="display: none;"
+                  onchange={(e) => {
+                    const input = e.currentTarget as HTMLInputElement;
+                    const file = input.files?.[0];
+                    if (file) onUploadEvidenceFile(evidence.id, file);
+                    input.value = '';
+                  }}
+                />
+              </label>
+
+              <!-- Botón eliminar evidencia -->
+              <button
+                onclick={() => onDeleteEvidence(evidence.id)}
+                style="
+                  margin-left: auto;
+                  padding: 0.55rem 0.8rem;
+                  border: 1px solid #e2b8b8;
+                  background: white;
+                  color: #9a2f2f;
+                  border-radius: 10px;
+                  cursor: pointer;
+                  font-family: inherit;
+                "
+              >
+                Eliminar evidencia
+              </button>
+            </div>
           </div>
         </div>
       {/each}
