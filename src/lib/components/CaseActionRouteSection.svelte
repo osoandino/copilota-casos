@@ -15,11 +15,11 @@
   type OperationalAnalysis = {
     summary?: string;
     urgency?: string;
-    signals?: string[];
+    detectedSignals?: string[];
     missingEvidence?: string[];
-    firstStep?: string;
-    escalation?: string;
-    suggestedAuthorities?: string[];
+    primaryActions?: string[];
+    escalationActions?: string[];
+    likelyAuthorities?: string[];
     recommendedTemplates?: string[];
   } | null;
 
@@ -111,8 +111,8 @@
         <div><strong>Urgencia:</strong> {safe(operationalAnalysis?.urgency)}</div>
         <div><strong>Patrón principal:</strong> {safe(operationalPrimaryCandidate?.label)}</div>
         <div><strong>Descripción:</strong> {safe(operationalPrimaryCandidate?.shortDescription)}</div>
-        <div><strong>Primer paso:</strong> {safe(operationalAnalysis?.firstStep)}</div>
-        <div><strong>Escalamiento:</strong> {safe(operationalAnalysis?.escalation)}</div>
+        <div><strong>Primer paso:</strong> {safe(operationalAnalysis?.primaryActions?.[0])}</div>
+        <div><strong>Escalamiento:</strong> {safe(operationalAnalysis?.escalationActions?.[0])}</div>
       </div>
     </div>
 
@@ -133,7 +133,7 @@
       >
         <div style="font-weight: 700; margin-bottom: 0.45rem;">Señales detectadas</div>
         <div style="color: #556677; line-height: 1.55;">
-          {prettyList(operationalAnalysis?.signals)}
+          {prettyList(operationalAnalysis?.detectedSignals)}
         </div>
       </div>
 
@@ -161,7 +161,7 @@
       >
         <div style="font-weight: 700; margin-bottom: 0.45rem;">Autoridades sugeridas</div>
         <div style="color: #556677; line-height: 1.55;">
-          {prettyList(operationalAnalysis?.suggestedAuthorities)}
+          {prettyList(operationalAnalysis?.likelyAuthorities)}
         </div>
       </div>
 
