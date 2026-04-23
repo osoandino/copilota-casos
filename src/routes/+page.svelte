@@ -456,7 +456,9 @@
           authorityContacted: currentCase.authorityContacted,
           authorityResponse: currentCase.authorityResponse,
           narrative: currentCase.narrative,
-          evidence: currentCase.evidence
+          // Se excluye fileData de cada evidencia — las imágenes base64 son
+          // demasiado grandes para el payload y el API no las necesita
+          evidence: (currentCase.evidence || []).map(({ fileData, ...rest }) => rest)
         },
         institutionRecommendation,
         safety_identifier: currentCase.id
