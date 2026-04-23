@@ -398,11 +398,12 @@
               </select>
             </label>
 
+            <!-- Nombre: no-controlado, guarda solo al salir del campo -->
             <label>
               <div style="margin-bottom: 0.35rem; font-weight: 600;">Nombre</div>
               <input
                 value={evidence.name || ''}
-                oninput={(e) =>
+                onblur={(e) =>
                   onUpdateEvidence(
                     evidence.id,
                     'name',
@@ -412,11 +413,12 @@
               />
             </label>
 
+            <!-- Fecha -->
             <label>
               <div style="margin-bottom: 0.35rem; font-weight: 600;">Fecha</div>
               <input
                 value={evidence.date || ''}
-                oninput={(e) =>
+                onblur={(e) =>
                   onUpdateEvidence(
                     evidence.id,
                     'date',
@@ -426,11 +428,12 @@
               />
             </label>
 
+            <!-- GPS -->
             <label>
               <div style="margin-bottom: 0.35rem; font-weight: 600;">GPS</div>
               <input
                 value={evidence.gps || ''}
-                oninput={(e) =>
+                onblur={(e) =>
                   onUpdateEvidence(
                     evidence.id,
                     'gps',
@@ -445,31 +448,33 @@
             {evidenceTypeHelp(evidence.type)}
           </div>
 
+          <!-- Descripción: no-controlada, guarda solo al salir -->
           <label style="display: block; margin-top: 0.8rem;">
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Descripción</div>
             <textarea
               rows="3"
-              oninput={(e) =>
+              onblur={(e) =>
                 onUpdateEvidence(
                   evidence.id,
                   'description',
                   (e.currentTarget as HTMLTextAreaElement).value
                 )}
-              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
+              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px; font-family: inherit; font-size: 1rem;"
             >{evidence.description || ''}</textarea>
           </label>
 
+          <!-- Qué demuestra: no-controlada, guarda solo al salir -->
           <label style="display: block; margin-top: 0.8rem;">
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Qué demuestra esta evidencia</div>
             <textarea
               rows="3"
-              oninput={(e) =>
+              onblur={(e) =>
                 onUpdateEvidence(
                   evidence.id,
                   'whatItShows',
                   (e.currentTarget as HTMLTextAreaElement).value
                 )}
-              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
+              style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px; font-family: inherit; font-size: 1rem;"
             >{evidence.whatItShows || ''}</textarea>
           </label>
 

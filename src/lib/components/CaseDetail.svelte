@@ -329,11 +329,14 @@
     (() => {
       const done: string[] = [];
 
-      // Narrar: tiene narrativa escrita
-      if (caseData?.narrative?.trim()) done.push('Narrar');
+      // Narrar: narrativa con al menos 30 caracteres y título con al menos 5
+      if ((caseData?.narrative?.trim().length ?? 0) >= 30 &&
+          (caseData?.title?.trim().length ?? 0) >= 5)
+        done.push('Narrar');
 
-      // Hechos: al menos comunidad o ubicación registradas
-      if (caseData?.community?.trim() || caseData?.location?.trim() || caseData?.dateStarted?.trim())
+      // Hechos: comunidad Y (ubicación O fecha) deben estar completos
+      if (caseData?.community?.trim() &&
+         (caseData?.location?.trim() || caseData?.dateStarted?.trim()))
         done.push('Hechos');
 
       // Evidencia: al menos un elemento cargado
@@ -416,7 +419,7 @@
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Título del caso</div>
             <input
               value={caseData.title || ''}
-              oninput={(e) => onUpdate('title', (e.currentTarget as HTMLInputElement).value)}
+              onblur={(e) => onUpdate('title', (e.currentTarget as HTMLInputElement).value)}
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             />
           </label>
@@ -426,7 +429,7 @@
             <textarea
               rows="10"
               value={caseData.narrative || ''}
-              oninput={(e) => onUpdate('narrative', (e.currentTarget as HTMLTextAreaElement).value)}
+              onblur={(e) => onUpdate('narrative', (e.currentTarget as HTMLTextAreaElement).value)}
               style="width: 100%; padding: 0.8rem; border: 1px solid #cfd8e3; border-radius: 12px; line-height: 1.55;"
             ></textarea>
           </label>
@@ -456,7 +459,7 @@
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Comunidad</div>
             <input
               value={caseData.community || ''}
-              oninput={(e) => onUpdate('community', (e.currentTarget as HTMLInputElement).value)}
+              onblur={(e) => onUpdate('community', (e.currentTarget as HTMLInputElement).value)}
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             />
           </label>
@@ -465,7 +468,7 @@
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Ubicación</div>
             <input
               value={caseData.location || ''}
-              oninput={(e) => onUpdate('location', (e.currentTarget as HTMLInputElement).value)}
+              onblur={(e) => onUpdate('location', (e.currentTarget as HTMLInputElement).value)}
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             />
           </label>
@@ -474,7 +477,7 @@
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Inicio del problema</div>
             <input
               value={caseData.dateStarted || ''}
-              oninput={(e) => onUpdate('dateStarted', (e.currentTarget as HTMLInputElement).value)}
+              onblur={(e) => onUpdate('dateStarted', (e.currentTarget as HTMLInputElement).value)}
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             />
           </label>
@@ -580,7 +583,7 @@
             <div style="margin-bottom: 0.35rem; font-weight: 600;">Personas afectadas</div>
             <input
               value={caseData.affectedPeople || ''}
-              oninput={(e) => onUpdate('affectedPeople', (e.currentTarget as HTMLInputElement).value)}
+              onblur={(e) => onUpdate('affectedPeople', (e.currentTarget as HTMLInputElement).value)}
               style="width: 100%; padding: 0.7rem; border: 1px solid #cfd8e3; border-radius: 12px;"
             />
           </label>

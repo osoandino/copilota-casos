@@ -5,6 +5,7 @@
 </script>
 
 <svelte:head>
+	<title>Yanapa Red</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 

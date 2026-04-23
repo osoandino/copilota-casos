@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getDocumentName } from '$lib/config/documentRegistry';
   import { onMount } from 'svelte';
+  import yanapaLogo from '$lib/assets/yanapa-red-logo.png';
   import { saveCase, deleteCase } from '$lib/db/cases';
   import { getAllCasesWithRelations } from '$lib/db/fullCases';
   import { createEmptyCase } from '$lib/logic/caseFactory';
@@ -680,19 +681,6 @@
   async function createTestCase() {
     try {
       const newCase = createEmptyCase();
-      newCase.title = `Caso de prueba ${cases.length + 1}`;
-      newCase.community = 'Comunidad piloto';
-      newCase.narrative =
-        'Este es un caso inicial de prueba para verificar que IndexedDB funciona.';
-      newCase.events.push({
-        id: `evt_extra_${Date.now()}`,
-        caseId: newCase.id,
-        type: 'note',
-        label: 'Evento de prueba',
-        notes: 'Se creó el caso de prueba',
-        createdAt: new Date().toISOString()
-      });
-
       await saveCase(toPlain(newCase));
       await loadCases();
       selectedCaseId = newCase.id;
@@ -849,16 +837,53 @@
     selectedCaseId = target.id;
   }
 
+  // Mapa de timers por campo — evita guardar en IndexedDB en cada tecla.
+  // Espera 400ms de pausa antes de persistir. Los selects y chips guardan inmediatamente.
+  const _debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+  const TEXT_FIELDS = new Set(['title', 'narrative', 'community', 'location', 'affectedPeople', 'dateStarted', 'problemType']);
+
   async function handleCaseUpdate(field: string, value: string) {
-    await updateCaseField(field as keyof CaseRecord, value);
+    // Actualización optimista en memoria — la UI responde sin esperar a IndexedDB
+    const target = cases.find((c) => c.id === selectedCaseId);
+    if (target) {
+      target[field as keyof CaseRecord] = value as never;
+      target.updatedAt = new Date().toISOString();
+    }
+
+    if (TEXT_FIELDS.has(field)) {
+      // Campos de texto: debounce de 400ms
+      clearTimeout(_debounceTimers[field]);
+      _debounceTimers[field] = setTimeout(async () => {
+        await updateCaseField(field as keyof CaseRecord, value);
+      }, 400);
+    } else {
+      // Selects, chips y campos especiales: guardan de inmediato
+      await updateCaseField(field as keyof CaseRecord, value);
+    }
   }
+
+  const _evidenceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+  const EVIDENCE_TEXT_FIELDS = new Set(['name', 'description', 'whatItShows', 'gps', 'date']);
 
   async function handleEvidenceUpdate(
     evidenceId: string,
     field: string,
     value: string
   ) {
-    await updateEvidence(evidenceId, field as keyof Evidence, value);
+    // Actualización optimista en memoria
+    const target = cases.find((c) => c.id === selectedCaseId);
+    const evItem = target?.evidence?.find((e) => e.id === evidenceId);
+    if (evItem) evItem[field as keyof Evidence] = value as never;
+
+    if (EVIDENCE_TEXT_FIELDS.has(field)) {
+      const key = `${evidenceId}:${field}`;
+      clearTimeout(_evidenceTimers[key]);
+      _evidenceTimers[key] = setTimeout(async () => {
+        await updateEvidence(evidenceId, field as keyof Evidence, value);
+      }, 400);
+    } else {
+      await updateEvidence(evidenceId, field as keyof Evidence, value);
+    }
   }
 
   function mergeNormativeMatches(
@@ -1064,7 +1089,7 @@
         <!-- Logo / título -->
         <div style="font-size: 2.2rem; margin-bottom: 0.3rem;">🔐</div>
         <div style="font-size: 1.3rem; font-weight: 800; color: #14202b; margin-bottom: 0.25rem;">
-          Copilota de Casos
+          Yanapa Red
         </div>
         <div style="font-size: 0.9rem; color: #607386; margin-bottom: 1.6rem;">
           {#if pinMode === 'setup'}
@@ -1236,7 +1261,7 @@
             color: #0f1720;
           "
         >
-          Copilota del Agua TDPS
+          Yanapa Red
         </h1>
 
         <p
@@ -1262,9 +1287,8 @@
             max-width: 760px;
           "
         >
-          Permite registrar casos, organizar evidencia, activar rutas de acción,
-          recuperar base normativa y generar documentos dirigidos a instituciones
-          competentes.
+          Suma Jakaña — Vivir Bien. Registra casos, organiza evidencia, activa rutas de acción
+          y genera documentos para defender tu territorio y tu agua.
         </p>
       </div>
 
@@ -1309,8 +1333,8 @@
           ></div>
 
           <img
-            src="/logo-copilota.png"
-            alt="Logo de la Copilota del Agua TDPS"
+            src={yanapaLogo}
+            alt="Yanapa Red — Suma Jakaña"
             style="
               position: relative;
               max-width: 100%;
@@ -1441,13 +1465,13 @@
       "
     >
       <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem;">
-        Bienvenida, Copilota 👋
+        Bienvenida a Yanapa Red 👋
       </div>
       <div style="font-size: 1rem; opacity: 0.88; line-height: 1.6; margin-bottom: 1.4rem; max-width: 560px;">
-        Esta herramienta te ayuda a documentar casos de daño ambiental en el
-        sistema TDPS y a encontrar la mejor forma de defenderte. Puedes registrar
-        el problema, agregar pruebas, identificar las leyes que te protegen y
-        generar cartas o solicitudes listas para presentar.
+        Yanapa Red — Suma Jakaña — te ayuda a documentar casos de daño ambiental
+        en el sistema TDPS y a encontrar la mejor forma de defenderte. Puedes
+        registrar el problema, agregar pruebas, identificar las leyes que te
+        protegen y generar cartas o solicitudes listas para presentar.
       </div>
 
       <!-- Pasos rápidos -->
