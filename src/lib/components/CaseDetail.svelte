@@ -348,8 +348,15 @@
       // Marco normativo: al menos una norma seleccionada para uso
       if (normativeMatches?.some((m) => m.selectedForUse)) done.push('Marco normativo');
 
-      // Documentos: al menos un documento generado
-      if (generatedDocuments?.length > 0) done.push('Documentos');
+      // Documentos: el caso tiene título + narrativa suficientes Y documentos disponibles.
+      // generatedDocuments siempre tiene al menos uno (ficha resumen), así que solo
+      // verificamos que el caso tenga contenido real para evitar el tick en casos nuevos.
+      if (
+        (generatedDocuments?.length ?? 0) > 0 &&
+        (caseData?.title?.trim().length ?? 0) >= 5 &&
+        (caseData?.narrative?.trim().length ?? 0) >= 30
+      )
+        done.push('Documentos');
 
       return done;
     })()

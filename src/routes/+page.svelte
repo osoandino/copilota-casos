@@ -85,6 +85,48 @@
     return String(error);
   }
 
+  // Convierte errores técnicos de red/Supabase en mensajes comprensibles para las usuarias
+  function friendlyCloudError(raw: string): { title: string; detail: string; tip: string } {
+    const r = raw.toLowerCase();
+
+    if (r.includes('networkerror') || r.includes('fetch resource') ||
+        r.includes('could not resolve') || r.includes('failed to fetch') ||
+        r.includes('network request failed')) {
+      return {
+        title: 'No se pudo conectar con la nube',
+        detail: 'El servidor de almacenamiento no está disponible en este momento.',
+        tip: 'Es posible que el proyecto esté pausado. Ve a app.supabase.com, busca tu proyecto y presiona "Restore project". Espera 1-2 minutos e intenta de nuevo.'
+      };
+    }
+    if (r.includes('payload_too_large') || r.includes('too large') || r.includes('413')) {
+      return {
+        title: 'El caso es demasiado grande para guardar',
+        detail: 'El expediente supera el límite de tamaño permitido por el servidor.',
+        tip: 'Intenta eliminar algunas fotografías adjuntas y vuelve a guardar.'
+      };
+    }
+    if (r.includes('jwt') || r.includes('401') || r.includes('unauthorized') ||
+        r.includes('apikey') || r.includes('invalid key')) {
+      return {
+        title: 'Error de acceso a la nube',
+        detail: 'Las credenciales de conexión no son válidas.',
+        tip: 'Verifica que las variables SUPABASE_URL y SUPABASE_ANON_KEY estén correctas en el archivo .env.'
+      };
+    }
+    if (r.includes('timeout') || r.includes('timed out')) {
+      return {
+        title: 'La conexión tardó demasiado',
+        detail: 'El servidor no respondió a tiempo.',
+        tip: 'Verifica tu conexión a internet e intenta de nuevo.'
+      };
+    }
+    return {
+      title: 'Error al conectar con la nube',
+      detail: raw.length > 120 ? raw.slice(0, 120) + '…' : raw,
+      tip: 'Verifica tu conexión a internet. Si el problema persiste, el servidor puede estar temporalmente fuera de servicio.'
+    };
+  }
+
   function normalizeRelevance(value?: string): 'alta' | 'media' | 'baja' {
     const normalized = (value || '').toLowerCase();
     if (normalized === 'alta') return 'alta';
@@ -1386,7 +1428,53 @@
   </div>
 
   {#if cloudError}
-    <p><strong>Error nube:</strong> {cloudError}</p>
+    {@const err = friendlyCloudError(cloudError)}
+    <div
+      style="
+        margin-bottom: 1.25rem;
+        border: 1px solid #f3b3b3;
+        border-left: 5px solid #c0392b;
+        border-radius: 14px;
+        background: #fff5f5;
+        padding: 1rem 1.1rem;
+      "
+    >
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+        <span style="font-size: 1.2rem;">☁️</span>
+        <strong style="color: #8b1a1a; font-size: 1rem;">{err.title}</strong>
+      </div>
+      <div style="font-size: 0.92rem; color: #5a2020; margin-bottom: 0.5rem;">
+        {err.detail}
+      </div>
+      <div
+        style="
+          background: #fde8e8;
+          border-radius: 8px;
+          padding: 0.55rem 0.8rem;
+          font-size: 0.88rem;
+          color: #6b2020;
+          line-height: 1.5;
+        "
+      >
+        💡 {err.tip}
+      </div>
+      <button
+        onclick={() => (cloudError = '')}
+        style="
+          margin-top: 0.7rem;
+          background: none;
+          border: 1px solid #c0392b;
+          color: #c0392b;
+          border-radius: 8px;
+          padding: 0.35rem 0.8rem;
+          font-size: 0.85rem;
+          cursor: pointer;
+          font-family: inherit;
+        "
+      >
+        Cerrar
+      </button>
+    </div>
   {/if}
 
   {#if cloudBackups.length > 0}
